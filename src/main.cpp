@@ -74,22 +74,28 @@ int main(int argc, char** argv) {
         return -1;
     }
 
+    std::cout << "DDS profile: " << (std::getenv("FASTRTPS_DEFAULT_PROFILES_FILE") ?: "(not set)") << "\n" << std::flush;
     portal->initialize();
+    std::cout << "Portal initialized, waiting for first state...\n" << std::flush;
 
     // Wait for first state.
-    while (!terminated && !portal->hasState())
+    int wait_count = 0;
+    while (!terminated && !portal->hasState()) {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        if (++wait_count % 50 == 0)
+            std::cout << "Still waiting for state... (" << wait_count/10 << "s)\n" << std::flush;
+    }
     if (terminated) return 0;
 
     // Switch real robot to Custom mode (Booster only).
     if (backend == "booster") {
+        // Move robot to safe prepare pose before starting the control loop.
         auto* booster_portal = dynamic_cast<RobotPortal*>(portal.get());
+        booster_portal->prepare(cfg.robot.prepare_state);
         if (!booster_portal || booster_portal->changeMode(booster::robot::RobotMode::kCustom) != 0) {
             std::cerr << "Failed to switch robot to Custom mode.\n";
             return -1;
         }
-        // Move robot to safe prepare pose before starting the control loop.
-        booster_portal->prepare(cfg.robot.prepare_state);
     }
     // circus and mujoco backends need no mode switch.
 

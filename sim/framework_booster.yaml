@@ -1,3 +1,4 @@
 # Arena sim2sim via booster-motion DDS path
 image: arena/arena-booster
-volumes: []
+volumes:
+  - "/home/neverorfrog/code/spqr/arena:/workspace"

@@ -31,6 +31,8 @@ COPY external/simbridge/tools/ /bridge_ws/tools/
 COPY external/simbridge/CMakeLists.txt /bridge_ws/
 
 RUN mv /bridge_ws/tools/booster_motion /opt/booster
+# Required by booster-motion command_manager_v2; missing → idle mode may produce zero torques → robot falls.
+# COPY sim/system_settings_config.yaml /opt/booster/configs/system_settings_config.yaml
 RUN source /opt/ros/humble/setup.bash && \
     cmake -S /bridge_ws -B /tmp/build -DCMAKE_INSTALL_PREFIX=/opt/ros/humble && \
     cmake --build /tmp/build && rm -rf /tmp/build

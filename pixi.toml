@@ -33,6 +33,9 @@ test = { cmd = "cd $PIXI_PROJECT_ROOT/build/x86 && ctest --output-on-failure", d
 setup = { cmd = "bash $PIXI_PROJECT_ROOT/scripts/setup.sh", description = "One-time dev machine setup (TRT, Docker, sysroot)" }
 configure-aarch64 = { cmd = "pixi run -e robot _configure-aarch64", description = "Configure CMake for aarch64 cross-compilation" }
 compile-aarch64 = { cmd = "pixi run -e robot _compile-aarch64", description = "Cross-compile for aarch64" }
+sim-booster = { cmd = "docker network rm CIRCUS_network 2>/dev/null || true; pixi run --manifest-path $PIXI_PROJECT_ROOT/external/circus/pixi.toml circus --scene $PIXI_PROJECT_ROOT/sim/scene.yaml --framework $PIXI_PROJECT_ROOT/sim/framework_booster.yaml", depends-on = ["compile"], description = "Run booster sim2sim (booster-motion + simbridge + arena in docker)" }
+logs-booster = { cmd = "docker logs -f CIRCUS_red_Booster-T1_0_container 2>&1", description = "Tail arena/booster-motion/simbridge logs from the running sim-booster container" }
+sim-circus  = { cmd = "pixi run --manifest-path $PIXI_PROJECT_ROOT/external/circus/pixi.toml circus --scene $PIXI_PROJECT_ROOT/sim/scene.yaml --framework $PIXI_PROJECT_ROOT/sim/framework_circus.yaml", depends-on = ["compile"], description = "Run circus sim2sim (arena ↔ Circus TCP/msgpack)" }
 
 [environments]
 default = { solve-group = "default" }

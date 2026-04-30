@@ -40,6 +40,7 @@ void RobotPortal::publishCommand(const float* joint_targets, const float* kp, co
 }
 
 void RobotPortal::prepare(const PrepareStateConfig<23>& prep) {
+    next_tick_ = Clock::now();
     auto start = Clock::now();
     auto duration = std::chrono::duration_cast<Clock::duration>(
         std::chrono::duration<float>(prep.duration_s));
@@ -58,6 +59,7 @@ void RobotPortal::tick() {
 }
 
 void RobotPortal::lowStateCallback(const booster_interface::msg::LowState& msg) {
+    if (!has_state_) std::cout << "[RobotPortal] First LowState received!\n" << std::flush;
     has_state_ = true;
 
     for (int i = 0; i < 3; i++) {
