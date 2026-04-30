@@ -1,0 +1,3 @@
+# Arena sim2sim via booster-motion DDS path
+image: arena/arena-booster
+volumes: []

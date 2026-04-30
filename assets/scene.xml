@@ -1,0 +1,12 @@
+<mujoco model="classic_checker_scene">
+  <asset>
+    <texture name="texplane" type="2d" builtin="checker" rgb1="0.18 0.20 0.22" rgb2="0.75 0.78 0.80" width="512" height="512"/>
+    <material name="matplane" texture="texplane" texrepeat="8 8" reflectance="0.15" rgba="1 1 1 1"/>
+  </asset>
+
+  <worldbody>
+    <light name="key" directional="true" pos="2 0 4" dir="-0.4 0 -1" diffuse="0.9 0.9 0.9"/>
+    <light name="fill" directional="true" pos="-2 0 3" dir="0.3 0 -1" diffuse="0.35 0.35 0.35"/>
+    <geom name="ground" type="plane" pos="0 0 0" size="0 0 0.05" material="matplane" friction="1 0.005 0.0001"/>
+  </worldbody>
+</mujoco>

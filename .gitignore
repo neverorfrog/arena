@@ -1,0 +1,5 @@
+*.json
+external/TensorRT
+external/spqrbooster2026
+.cache
+build

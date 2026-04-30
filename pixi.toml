@@ -1,0 +1,48 @@
+[workspace]
+platforms = ["linux-64", "linux-aarch64"]
+
+channels = [
+    "https://prefix.dev/conda-forge",
+    "https://prefix.dev/spqr",
+]
+
+[dependencies]
+cmake = ">=4.3.0,<5"
+onnxruntime-cpp = ">=1.24.2,<2"
+msgpack-cxx = "*"
+eigen = "*"
+booster_robotics_sdk = ">=1.5.0"
+boost-cpp = "*"
+tinyxml2 = "*"
+mujoco = "*"
+glfw = "*"
+libgl-devel = "*"
+libegl-devel = "*"
+gtest = "*"
+
+[target.linux-64.dependencies]
+gcc_linux-64 = ">=14.3.0,<15"
+gxx_linux-64 = ">=14.3.0,<15"
+sysroot_linux-64 = ">=2.39"
+sysroot_linux-aarch64 = ">=2.39"
+
+[tasks]
+configure = { cmd = "cmake -S $PIXI_PROJECT_ROOT -B $PIXI_PROJECT_ROOT/build/x86 -DCMAKE_PREFIX_PATH=$CONDA_PREFIX", description = "Configure CMake for x86" }
+compile = { cmd = "cmake --build $PIXI_PROJECT_ROOT/build/x86 --parallel 8", depends-on = ["configure"], description = "Compile arena for x86" }
+test = { cmd = "cd $PIXI_PROJECT_ROOT/build/x86 && ctest --output-on-failure", depends-on = ["compile"], description = "Run tests" }
+setup = { cmd = "bash $PIXI_PROJECT_ROOT/scripts/setup.sh", description = "One-time dev machine setup (TRT, Docker, sysroot)" }
+configure-aarch64 = { cmd = "pixi run -e robot _configure-aarch64", description = "Configure CMake for aarch64 cross-compilation" }
+compile-aarch64 = { cmd = "pixi run -e robot _compile-aarch64", description = "Cross-compile for aarch64" }
+
+[environments]
+default = { solve-group = "default" }
+robot = { features = ["cross-compile"], no-default-feature = true }
+
+[feature.cross-compile.target.linux-64.dependencies]
+gcc_linux-aarch64 = ">=14.3.0,<15"
+gxx_linux-aarch64 = ">=14.3.0,<15"
+cmake = ">=4.3.0,<5"
+
+[feature.cross-compile.tasks]
+_configure-aarch64 = { cmd = "cmake -S $PIXI_PROJECT_ROOT -B $PIXI_PROJECT_ROOT/build/aarch64 -DCMAKE_PREFIX_PATH=$CONDA_PREFIX --toolchain $PIXI_PROJECT_ROOT/cmake/aarch64-toolchain.cmake" }
+_compile-aarch64 = { cmd = "cmake --build $PIXI_PROJECT_ROOT/build/aarch64 --parallel 8", depends-on = ["_configure-aarch64"] }
