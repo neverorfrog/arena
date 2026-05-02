@@ -1,3 +1,0 @@
-# Arena sim2sim via CircusPortal (direct TCP/msgpack connection)
-image: arena/arena-circus
-volumes: []

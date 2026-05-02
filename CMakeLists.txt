@@ -9,8 +9,10 @@ if(DEFINED ENV{CONDA_PREFIX} AND NOT CMAKE_CROSSCOMPILING)
   set(_sysroot "$ENV{CONDA_PREFIX}/x86_64-conda-linux-gnu/sysroot")
   if(EXISTS "${_sysroot}/lib64/ld-linux-x86-64.so.2")
     set(CMAKE_BUILD_RPATH "${_sysroot}/lib64;$ENV{CONDA_PREFIX}/lib")
-    string(APPEND CMAKE_EXE_LINKER_FLAGS
-            " -Wl,-dynamic-linker,${_sysroot}/lib64/ld-linux-x86-64.so.2")
+    string(
+            APPEND CMAKE_EXE_LINKER_FLAGS
+            " -Wl,-dynamic-linker,${_sysroot}/lib64/ld-linux-x86-64.so.2"
+        )
   endif()
 endif()
 
@@ -21,6 +23,10 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 add_compile_definitions(PROJECT_ROOT="${CMAKE_SOURCE_DIR}")
 
 # ================ Dependencies ======================
+# Prefer -pthread over -lpthreads (cross-compilation can't detect
+# pthread-in-libc because CMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY
+# prevents linking; the aarch64 sysroot only has libpthread, not libpthreads).
+set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
 find_package(booster_robotics_sdk REQUIRED)
 find_package(Eigen3 REQUIRED)

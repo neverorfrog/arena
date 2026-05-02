@@ -2,6 +2,7 @@ FROM ros:humble
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && apt-get install -y \
+supervisor \
 # libmsgpack is the only library that doesn't reflect what's already inside the robot.
 # It is necessary for simbridge now, but we may want to drop it at some point.
 libmsgpack-dev \
@@ -40,4 +41,4 @@ RUN source /opt/ros/humble/setup.bash && \
 ENV LD_LIBRARY_PATH=/opt/booster/lib:/opt/booster/lib-usr-local:/opt/booster/lib-x86_64-linux-gnu
 ENV BOOSTER_ROOT=/opt/booster
 
-ENTRYPOINT ["/workspace/scripts/docker_entrypoint_booster.sh"]
+ENTRYPOINT ["/workspace/scripts/docker_entrypoint.sh"]

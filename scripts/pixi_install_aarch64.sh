@@ -70,8 +70,19 @@ pixi_install_aarch64() {
         ln -sf sbsa-linux "$dest/targets/aarch64-linux"
     fi
 
-    # Again, I'm trying to replicate what's inside the robot. This should be a standard for every linux filesystem
-    # but we need to verify this.
+    # pixi-pack skips sysroot_linux-aarch64 when targeting linux-aarch64
+    # because it's declared under [target.linux-64.dependencies] and nothing
+    # pulls it transitively for the target platform. Copy glibc headers and
+    # crt objects directly from the default environment.
+    local default_env_prefix="$root_dir/.pixi/envs/default"
+    local local_sysroot="$default_env_prefix/aarch64-conda-linux-gnu/sysroot"
+    if [ -d "$local_sysroot" ]; then
+        cp -a "$local_sysroot"/. "$dest/" 2>/dev/null || true
+        echo "[aarch64] Sysroot files copied from local sysroot_linux-aarch64 package."
+    fi
+
+    # After sysroot copy, ensure ld-linux is accessible at lib/ld-linux-aarch64.so.1
+    # (sysroot package ships lib -> lib64 symlink that conflicts with conda lib/ dir)
     if [ -f "$dest/lib64/ld-linux-aarch64.so.1" ] && [ ! -f "$dest/lib/ld-linux-aarch64.so.1" ]; then
         mkdir -p "$dest/lib"
         ln -sf ../lib64/ld-linux-aarch64.so.1 "$dest/lib/ld-linux-aarch64.so.1"

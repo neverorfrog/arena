@@ -104,8 +104,7 @@ main() {
 
     [ -n "$ARCHIVE_X86" ] && build_trt_engines
 
-    # docker build -f "$ROOT/circus.dockerfile"  -t arena/arena-circus  "$ROOT"
-    docker build -f "$ROOT/booster.dockerfile" -t arena/arena-booster "$ROOT"
+    docker build -t arena/arena-booster "$ROOT"
     echo "Setup complete."
 }
 

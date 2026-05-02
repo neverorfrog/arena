@@ -6,6 +6,14 @@ channels = [
     "https://prefix.dev/spqr",
 ]
 
+[environments]
+default = { solve-group = "default" }
+robot = { features = ["cross-compile"], no-default-feature = true }
+
+[system-requirements]
+cuda = "12.0"
+libc = "2.35"
+
 [dependencies]
 cmake = ">=4.3.0,<5"
 onnxruntime-cpp = ">=1.24.2,<2"
@@ -33,18 +41,16 @@ test = { cmd = "cd $PIXI_PROJECT_ROOT/build/x86 && ctest --output-on-failure", d
 setup = { cmd = "bash $PIXI_PROJECT_ROOT/scripts/setup.sh", description = "One-time dev machine setup (TRT, Docker, sysroot)" }
 configure-aarch64 = { cmd = "pixi run -e robot _configure-aarch64", description = "Configure CMake for aarch64 cross-compilation" }
 compile-aarch64 = { cmd = "pixi run -e robot _compile-aarch64", description = "Cross-compile for aarch64" }
-sim-booster = { cmd = "docker network rm CIRCUS_network 2>/dev/null || true; pixi run --manifest-path $PIXI_PROJECT_ROOT/external/circus/pixi.toml circus --scene $PIXI_PROJECT_ROOT/sim/scene.yaml --framework $PIXI_PROJECT_ROOT/sim/framework_booster.yaml", depends-on = ["compile"], description = "Run booster sim2sim (booster-motion + simbridge + arena in docker)" }
-logs-booster = { cmd = "docker logs -f CIRCUS_red_Booster-T1_0_container 2>&1", description = "Tail arena/booster-motion/simbridge logs from the running sim-booster container" }
-sim-circus  = { cmd = "pixi run --manifest-path $PIXI_PROJECT_ROOT/external/circus/pixi.toml circus --scene $PIXI_PROJECT_ROOT/sim/scene.yaml --framework $PIXI_PROJECT_ROOT/sim/framework_circus.yaml", depends-on = ["compile"], description = "Run circus sim2sim (arena ↔ Circus TCP/msgpack)" }
-
-[environments]
-default = { solve-group = "default" }
-robot = { features = ["cross-compile"], no-default-feature = true }
+sim = { cmd = "docker network rm CIRCUS_network 2>/dev/null || true; pixi run --manifest-path $PIXI_PROJECT_ROOT/external/circus/pixi.toml circus --scene $PIXI_PROJECT_ROOT/sim/scene.yaml --framework $PIXI_PROJECT_ROOT/sim/framework_booster.yaml", env = { FRAMEWORK_PATH = "$PIXI_PROJECT_ROOT" , JOYSTICK_DEVICE = "/dev/input/js2" }, depends-on = ["compile"], description = "Run booster sim2sim (booster-motion + simbridge + arena in docker)" }
+logs-arena = { cmd = "docker exec CIRCUS_red_Booster-T1_0_container tail -n 100 -f /var/log/arena.log /var/log/arena.err", description = "Tail arena logs" }
+logs-booster = { cmd = "docker exec CIRCUS_red_Booster-T1_0_container tail -n 100 -f /var/log/booster-motion.log /var/log/booster-motion.err", description = "Tail booster-motion logs" }
+logs-bridge = { cmd = "docker exec CIRCUS_red_Booster-T1_0_container tail -n 100 -f /var/log/simbridge.log /var/log/simbridge.err", description = "Tail simbridge logs" }
 
 [feature.cross-compile.target.linux-64.dependencies]
 gcc_linux-aarch64 = ">=14.3.0,<15"
 gxx_linux-aarch64 = ">=14.3.0,<15"
-cmake = ">=4.3.0,<5"
+cmake = "==4.3.0"
+cuda-nvcc = "*"
 
 [feature.cross-compile.tasks]
 _configure-aarch64 = { cmd = "cmake -S $PIXI_PROJECT_ROOT -B $PIXI_PROJECT_ROOT/build/aarch64 -DCMAKE_PREFIX_PATH=$CONDA_PREFIX --toolchain $PIXI_PROJECT_ROOT/cmake/aarch64-toolchain.cmake" }

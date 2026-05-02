@@ -1,4 +1,6 @@
 # Arena sim2sim via booster-motion DDS path
+# Volumes with empty/relative host path are resolved relative to PIXI_PROJECT_ROOT.
 image: arena/arena-booster
 volumes:
-  - "/home/neverorfrog/code/spqr/arena:/workspace"
+  - ":/workspace"
+  - "/dev/shm/circus_ipc:/dev/shm/circus_ipc"
