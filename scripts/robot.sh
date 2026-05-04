@@ -29,6 +29,8 @@ show_help() {
     echo "  run       Run arena in foreground (Ctrl+C to stop)"
     echo "  shell     Open interactive shell on robot"
     echo "  ssh       SSH into the robot"
+    echo "  install   Install all systemd services + daemons"
+    echo "  uninstall Remove all systemd services + daemons"
 }
 
 CMD=""
@@ -56,5 +58,7 @@ case "$CMD" in
     run)     ssh $SSH_OPTS -t "$REMOTE" "cd ${ROBOT_PATH} && ./run.sh run" ;;
     shell)   ssh $SSH_OPTS -t "$REMOTE" "cd ${ROBOT_PATH} && ./run.sh shell" ;;
     ssh)     ssh $SSH_OPTS "$REMOTE" ;;
+    install) ssh $SSH_OPTS -t "$REMOTE" "cd ${ROBOT_PATH} && ./run.sh install" ;;
+    uninstall) ssh $SSH_OPTS -t "$REMOTE" "cd ${ROBOT_PATH} && ./run.sh uninstall" ;;
     *)       echo "Unknown command: $CMD"; show_help; exit 1 ;;
 esac

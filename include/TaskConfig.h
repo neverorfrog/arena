@@ -29,4 +29,6 @@ struct TaskConfig {
     // Path to the scene MJCF loaded by MujocoPortal.
     // The robot XML is loaded separately from robot.mjcf_path.
     std::string scene_mjcf_path;
+
+    bool debug = false;  // Enable per-step diagnostic output
 };

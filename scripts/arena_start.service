@@ -1,12 +1,12 @@
 [Unit]
-Description=Arena Robot Policy
+Description=Arena Start Daemon (joystick LB+RB+Back)
 After=network.target
+ConditionPathExists=/home/booster/spqr/arena/build/aarch64/arena_start
 
 [Service]
 Type=simple
 User=booster
 Group=booster
-SupplementaryGroups=video
 WorkingDirectory=/home/booster/spqr/arena
 Environment=FASTRTPS_DEFAULT_PROFILES_FILE=/opt/booster/BoosterRos2/fastdds_profile.xml
 Environment=ROS_DISTRO=humble
@@ -14,13 +14,14 @@ Environment=ROS_VERSION=2
 Environment=ROS_LOCALHOST_ONLY=0
 Environment=AMENT_PREFIX_PATH=/opt/ros/humble
 Environment=LD_LIBRARY_PATH=/home/booster/spqr/arena/.pixi/aarch64-sysroot/lib:/usr/lib/aarch64-linux-gnu:/usr/lib/aarch64-linux-gnu/nvidia:/usr/local/cuda-12.6/targets/aarch64-linux/lib
-Environment=MODELS_DIR=/home/booster/spqr/arena/models
-Environment=SPQR_SOUNDS_PATH=/home/booster/spqr/arena/sounds
-ExecStart=/home/booster/spqr/arena/build/aarch64/main --backend booster --task t1-velocity-flat
-Restart=on-abnormal
+ExecStart=/home/booster/spqr/arena/build/aarch64/arena_start
+Restart=on-failure
 RestartSec=5
 TimeoutStartSec=30
-TimeoutStopSec=30
+TimeoutStopSec=10
 StandardOutput=journal
 StandardError=journal
-SyslogIdentifier=arena
+SyslogIdentifier=arena-start
+
+[Install]
+WantedBy=multi-user.target

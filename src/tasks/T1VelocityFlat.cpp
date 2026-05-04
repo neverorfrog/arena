@@ -99,6 +99,29 @@ class T1VelocityFlat : public Policy {
             observation.push_back(vel_command_.vy);
             observation.push_back(vel_command_.vyaw);
 
+            static int obs_diag = 0;
+            if (obs_diag % 50 == 0) {
+                std::cout << "\n[OBS] step=" << obs_diag
+                          << " cmd=[" << vel_command_.vx << "," << vel_command_.vy << "," << vel_command_.vyaw << "]"
+                          << " gyro=[" << state.gyro[0] << "," << state.gyro[1] << "," << state.gyro[2] << "]"
+                          << " pg=[" << state.projected_gravity[0] << "," << state.projected_gravity[1] << "," << state.projected_gravity[2] << "]\n";
+                // print leg joint obs (indices 6-17 of observation, which map to joints 11-22)
+                // joint_pos slots are obs indices [6..28], joint_vel are [29..51]
+                const char* leg_names[] = {"LHP","LHR","LHY","LKN","LAP","LAR",
+                                           "RHP","RHR","RHY","RKN","RAP","RAR"};
+                std::cout << "  leg pos_rel: ";
+                for (int k = 0; k < 12; k++)
+                    std::cout << leg_names[k] << "=" << observation[6 + 11 + k] << " ";
+                std::cout << "\n  leg vel:     ";
+                for (int k = 0; k < 12; k++)
+                    std::cout << leg_names[k] << "=" << observation[29 + 11 + k] << " ";
+                std::cout << "\n  last_action: ";
+                for (int k = 0; k < 12; k++)
+                    std::cout << leg_names[k] << "=" << observation[52 + 11 + k] << " ";
+                std::cout << "\n" << std::flush;
+            }
+            obs_diag++;
+
 #ifndef NDEBUG
             spec.validate_size(static_cast<int>(observation.size()));
 #endif
@@ -182,16 +205,24 @@ class T1VelocityFlat : public Policy {
             cfg.robot.parallel_joint_indices = {15, 16, 21, 22};
 
             // ── Safe startup sequence (real robot only) ───────────────────────
-            // Values from src/gladiators/t1_23dof/deploy.py PrepareStateConfig.
+            // Stiffness matches booster_deploy T1 prepare and Gait kp_test
+            // (kp=350 hips/knees, kp=450 ankles) — much stiffer than running.
             cfg.robot.prepare_state.duration_s    = 3.0f;
-            cfg.robot.prepare_state.stiffness     = cfg.robot.joint_stiffness;
+            cfg.robot.prepare_state.stiffness     = {
+                5.0f,   5.0f,                                         // Head
+                40.0f,  50.0f,  20.0f, 10.0f,                        // Left arm
+                40.0f,  50.0f,  20.0f, 10.0f,                        // Right arm
+                100.0f,                                               // Waist
+                350.0f, 350.0f, 180.0f, 350.0f, 450.0f, 450.0f,      // Left leg
+                350.0f, 350.0f, 180.0f, 350.0f, 450.0f, 450.0f,      // Right leg
+            };
             cfg.robot.prepare_state.damping       = {
                 0.1f,  0.1f,
                 0.5f,  1.5f, 0.2f, 0.2f,
                 0.5f,  1.5f, 0.2f, 0.2f,
                 5.0f,
-                7.5f, 7.5f, 3.0f, 5.5f, 2.0f, 2.0f,
-                7.5f, 7.5f, 3.0f, 5.5f, 2.0f, 2.0f,
+                7.5f, 7.5f, 3.0f, 5.5f, 0.5f, 0.5f,
+                7.5f, 7.5f, 3.0f, 5.5f, 0.5f, 0.5f,
             };
             cfg.robot.prepare_state.joint_pos     = {
                 0.0f,  0.0f,

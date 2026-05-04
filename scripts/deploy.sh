@@ -15,6 +15,7 @@ GREEN='\033[0;32m' BLUE='\033[0;34m' YELLOW='\033[1;33m' RED='\033[0;31m' NC='\0
 ROBOT_USER="${ROBOT_USER:-booster}"
 ROBOT_IP="${ROBOT_IP:-192.168.10.102}"
 ROBOT_PATH="${ROBOT_PATH:-~/spqr/arena}"
+ROBOT_PASSWORD="${ROBOT_PASSWORD:-123456}"
 SKIP_BUILD=false
 SKIP_RESTART=false
 
@@ -33,8 +34,9 @@ done
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel)"
 SSH_KEY="$HOME/.ssh/id_ed25519"
-SSH_OPTS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i $SSH_KEY"
+SSH_OPTS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR -i $SSH_KEY"
 ROBOT="${ROBOT_USER}@${ROBOT_IP}"
+RSUDO="echo '$ROBOT_PASSWORD' | sudo -S -p ''"
 
 echo -e "${BLUE}=== Arena Deploy → ${ROBOT}:${ROBOT_PATH} ===${NC}"
 
@@ -53,43 +55,45 @@ echo
 echo -e "${GREEN}[2/3] Transferring to robot...${NC}"
 
 BUILD_DIR="$ROOT/build/aarch64"
-if [ -d "$BUILD_DIR" ]; then
-    echo -e "  Transferring build directory..."
-    rsync -az -e "ssh $SSH_OPTS" --delete \
-        --exclude="CMakeFiles" \
-        --exclude="cmake_install.cmake" \
-        --exclude="Makefile" \
-        --exclude="CTestTestfile.cmake" \
-        "$BUILD_DIR/" "$ROBOT:${ROBOT_PATH}/build/aarch64/"
-    echo -e "  ${GREEN}✓${NC} Build directory transferred"
-else
-    echo -e "  ${RED}Build directory not found at $BUILD_DIR — skipping${NC}"
+if [ ! -d "$BUILD_DIR" ]; then
+    echo -e "  ${RED}Build directory not found at $BUILD_DIR${NC}"
+    exit 1
 fi
 
-# Sync models
-echo -e "  Syncing models..."
-rsync -az -e "ssh $SSH_OPTS" \
-    "$ROOT/external/colosseum/models/" "$ROBOT:${ROBOT_PATH}/models/" 2>/dev/null || true
+ssh $SSH_OPTS "$ROBOT" "mkdir -p ${ROBOT_PATH}/build/aarch64 ${ROBOT_PATH}/models ${ROBOT_PATH}/sounds"
 
-# Sync run.sh and arena.service (in case they changed)
-scp $SSH_OPTS "$SCRIPT_DIR/run.sh"       "$ROBOT:${ROBOT_PATH}/run.sh"       2>/dev/null || true
-scp $SSH_OPTS "$SCRIPT_DIR/arena.service" "$ROBOT:${ROBOT_PATH}/arena.service" 2>/dev/null || true
-ssh $SSH_OPTS "$ROBOT" "chmod +x ${ROBOT_PATH}/run.sh" 2>/dev/null || true
+echo -e "  ${BLUE}build...${NC}"
+rsync -aqz -e "ssh $SSH_OPTS" --delete \
+    --exclude="CMakeFiles" \
+    --exclude="cmake_install.cmake" \
+    --exclude="Makefile" \
+    --exclude="CTestTestfile.cmake" \
+    "$BUILD_DIR/" "$ROBOT:${ROBOT_PATH}/build/aarch64/"
 
-# Reinstall service in case it changed
-ssh $SSH_OPTS "$ROBOT" "sudo cp ${ROBOT_PATH}/arena.service /etc/systemd/system/arena.service && sudo systemctl daemon-reload" 2>/dev/null || true
+echo -e "  ${BLUE}models...${NC}"
+rsync -aqz -e "ssh $SSH_OPTS" \
+    "$ROOT/external/colosseum/models/" "$ROBOT:${ROBOT_PATH}/models/"
 
-echo -e "  ${GREEN}✓${NC} All files transferred"
+echo -e "  ${BLUE}sounds...${NC}"
+rsync -aqz -e "ssh $SSH_OPTS" \
+    "$ROOT/sounds/" "$ROBOT:${ROBOT_PATH}/sounds/"
+
+for f in run.sh arena.service arena_start.service arena_stop.service; do
+    scp -q $SSH_OPTS "$SCRIPT_DIR/$f" "$ROBOT:${ROBOT_PATH}/$f"
+done
+ssh $SSH_OPTS "$ROBOT" "chmod +x ${ROBOT_PATH}/run.sh"
+
+echo -e "  ${GREEN}✓${NC} Files transferred"
 echo
 
 # ── Step 3: Restart service ──────────────────────────────────────────────────
 echo -e "${GREEN}[3/3] Restarting arena service...${NC}"
 if [ "$SKIP_RESTART" = false ]; then
     if ssh $SSH_OPTS "$ROBOT" "systemctl is-active --quiet arena" 2>/dev/null; then
-        ssh $SSH_OPTS "$ROBOT" "sudo systemctl restart arena"
+        ssh $SSH_OPTS "$ROBOT" "$RSUDO systemctl restart arena"
         echo -e "  ${GREEN}✓${NC} Service restarted"
     else
-        ssh $SSH_OPTS "$ROBOT" "sudo systemctl start arena"
+        ssh $SSH_OPTS "$ROBOT" "$RSUDO systemctl start arena"
         echo -e "  ${GREEN}✓${NC} Service started"
     fi
 else

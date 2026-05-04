@@ -1,4 +1,5 @@
 #include "inputs/JoystickInput.h"
+#include "inputs/DDSRemoteInput.h"
 #include "inputs/IInputSource.h"
 #include "inputs/KeyboardInput.h"
 #include <cerrno>
@@ -85,7 +86,18 @@ std::unique_ptr<IInputSource> create_input_source() {
         return std::make_unique<JoystickInput>(std::move(device));
     }
 
-    std::cout << "[input] Joystick not available at " << device
-              << " — falling back to keyboard.\n";
+    std::cout << "[input] Joystick not available at " << device << "\n";
+
+    // Try DDS remote controller (robot has no evdev joystick — joystick
+    // state is published by MCU firmware on rt/remote_controller_state).
+    try {
+        auto dds = std::make_unique<DDSRemoteInput>();
+        std::cout << "[input] Using DDS remote controller.\n";
+        return dds;
+    } catch (...) {
+        std::cout << "[input] DDS remote controller unavailable"
+                  << " — falling back to keyboard.\n";
+    }
+
     return std::make_unique<KeyboardInput>();
 }

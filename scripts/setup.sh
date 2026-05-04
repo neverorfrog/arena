@@ -102,6 +102,15 @@ main() {
                "$ROOT/.pixi/aarch64-sysroot/lib/"
     fi
 
+    # Fix missing crt/ subdirectory in CUDA include dir.
+    # cuda_runtime_api.h includes "crt/host_defines.h" which expects
+    # crt/ relative to the include directory.
+    _cudart_inc="$ROOT/.pixi/envs/default/targets/x86_64-linux/include"
+    _robot_crt="$ROOT/.pixi/envs/robot/targets/x86_64-linux/include/crt"
+    if [ ! -d "$_cudart_inc/crt" ] && [ -d "$_robot_crt" ]; then
+        ln -sfn "$_robot_crt" "$_cudart_inc/crt"
+    fi
+
     [ -n "$ARCHIVE_X86" ] && build_trt_engines
 
     docker build -t arena/arena-booster "$ROOT"

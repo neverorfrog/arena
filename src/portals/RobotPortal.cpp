@@ -20,7 +20,10 @@ void RobotPortal::initialize() {
 
     low_cmd_pub = std::make_shared<ChannelPublisher<booster_interface::msg::LowCmd>>(booster::robot::b1::kTopicJointCtrl);
     low_cmd_pub->InitChannel();
-    cmd.cmd_type(booster_interface::msg::CmdType::PARALLEL);
+    std::cout << "[RobotPortal] Waiting 3s for DDS cmd subscriber discovery..." << std::flush;
+    std::this_thread::sleep_for(std::chrono::seconds(3));
+    std::cout << " done\n" << std::flush;
+    cmd.cmd_type(booster_interface::msg::CmdType::SERIAL);
     for (size_t i = 0; i < booster::robot::b1::kJointCnt; i++) {
       booster_interface::msg::MotorCmd motor_cmd;
       cmd.motor_cmd().push_back(motor_cmd);
@@ -36,17 +39,45 @@ void RobotPortal::publishCommand(const float* joint_targets, const float* kp, co
         cmd.motor_cmd().at(i).kd(kd[i]);
     }
 
+    if (debug_counter_ % 50 == 0 && has_state_) {
+        auto& s = state;
+        std::cout << "[DIAG] step=" << debug_counter_
+                  << " gyro=[" << s.gyro[0] << "," << s.gyro[1] << "," << s.gyro[2] << "]"
+                  << " pg=[" << s.projected_gravity[0] << "," << s.projected_gravity[1] << "," << s.projected_gravity[2] << "]\n";
+        const char* leg_names[] = {"LHP","LHR","LHY","LKN","LAP","LAR",
+                                   "RHP","RHR","RHY","RKN","RAP","RAR"};
+        for (int l = 0; l < 12; l++) {
+            int j = 11 + l;
+            std::cout << "  " << leg_names[l]
+                      << " q=" << s.joint_pos[j]
+                      << " v=" << s.joint_vel[j]
+                      << " tgt=" << joint_targets[j]
+                      << " kp=" << kp[j]
+                      << " kd=" << kd[j] << "\n";
+        }
+    }
+    debug_counter_++;
+
     low_cmd_pub->Write(&cmd);
 }
 
-void RobotPortal::prepare(const PrepareStateConfig<23>& prep) {
-    next_tick_ = Clock::now();
+void RobotPortal::smoothPrepare(const PrepareStateConfig<23>& prep) {
+    if (!has_state_) return;
+    float start_pos[23];
+    for (int i = 0; i < 23; i++) start_pos[i] = state.joint_pos[i];
+
     auto start = Clock::now();
     auto duration = std::chrono::duration_cast<Clock::duration>(
         std::chrono::duration<float>(prep.duration_s));
+
+    float interp_targets[23];
     while (Clock::now() - start < duration) {
-        publishCommand(prep.joint_pos.data(), prep.stiffness.data(), prep.damping.data());
-        tick();
+        float t = std::chrono::duration<float>(Clock::now() - start).count() / prep.duration_s;
+        if (t > 1.0f) t = 1.0f;
+        for (int i = 0; i < 23; i++)
+            interp_targets[i] = start_pos[i] + t * (prep.joint_pos[i] - start_pos[i]);
+        publishCommand(interp_targets, prep.stiffness.data(), prep.damping.data());
+        std::this_thread::sleep_for(std::chrono::microseconds(2000));  // 500 Hz (matches booster_deploy)
     }
 }
 
