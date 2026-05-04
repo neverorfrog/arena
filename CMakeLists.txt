@@ -47,7 +47,15 @@ endif()
 # TensorRT (optional -- enables --inference trt at runtime)
 find_library(TENSORRT_LIB nvinfer)
 if(TENSORRT_LIB)
+  # CUDA runtime headers (cuda_runtime_api.h) — required by TensorRT
+  find_package(CUDAToolkit REQUIRED)
+  find_path(CUDA_INCLUDE_DIR cuda_runtime_api.h
+    HINTS ${CUDAToolkit_INCLUDE_DIRS}
+    REQUIRED
+  )
   message(STATUS "TensorRT found -- TRT backend enabled")
+  message(STATUS "  nvinfer: ${TENSORRT_LIB}")
+  message(STATUS "  CUDA:    ${CUDA_INCLUDE_DIR}")
   set(WITH_TRT ON)
 endif()
 
@@ -61,6 +69,7 @@ file(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp"
 )
 list(FILTER SOURCES EXCLUDE REGEX ".*/main\\.cpp$")
+list(FILTER SOURCES EXCLUDE REGEX ".*/benchmark\\.cpp$")
 list(FILTER SOURCES EXCLUDE REGEX ".*/tests/.*")
 
 if(NOT MUJOCO)
@@ -92,8 +101,9 @@ if(MUJOCO)
   target_compile_definitions(arena PUBLIC MUJOCO)
 endif()
 if(WITH_TRT)
-  target_compile_definitions(arena PRIVATE WITH_TENSORRT)
-  target_link_libraries(arena PUBLIC ${TENSORRT_LIB})
+  target_include_directories(arena SYSTEM PRIVATE ${CUDA_INCLUDE_DIR})
+  target_compile_definitions(arena PUBLIC WITH_TENSORRT)
+  target_link_libraries(arena PUBLIC ${TENSORRT_LIB} CUDA::cudart)
 endif()
 
 # ====================================================
@@ -172,4 +182,16 @@ target_include_directories(
 )
 target_link_libraries(main PRIVATE arena)
 install(TARGETS main RUNTIME DESTINATION bin)
+# ====================================================
+
+# ====================== Benchmark ======================
+add_executable(benchmark ${CMAKE_CURRENT_SOURCE_DIR}/src/benchmark.cpp)
+target_include_directories(
+    benchmark
+    PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
+        ${CMAKE_CURRENT_SOURCE_DIR}
+)
+target_link_libraries(benchmark PRIVATE arena)
+install(TARGETS benchmark RUNTIME DESTINATION bin)
 # ====================================================

@@ -2,6 +2,9 @@
 #include "inputs/IInputSource.h"
 #include "engines/IInferenceEngine.h"
 #include "engines/OnnxInferenceEngine.h"
+#ifdef WITH_TENSORRT
+#include "engines/TrtInferenceEngine.h"
+#endif
 #include "RobotData.h"
 #include "RobotState.h"
 #include "TaskConfig.h"
@@ -9,7 +12,16 @@
 
 inline std::unique_ptr<IInferenceEngine> make_engine(const TaskConfig& cfg) {
     if (cfg.inference_backend == "trt") {
-        throw std::runtime_error("TensorRT backend not yet implemented");
+#ifdef WITH_TENSORRT
+        std::string engine_path = cfg.model_path;
+        auto pos = engine_path.rfind(".onnx");
+        if (pos != std::string::npos)
+            engine_path.replace(pos, 5, ".engine");
+        return std::make_unique<TrtInferenceEngine>(engine_path);
+#else
+        throw std::runtime_error(
+            "TensorRT backend not available (build without TensorRT)");
+#endif
     }
     return std::make_unique<OnnxInferenceEngine>(cfg.model_path);
 }

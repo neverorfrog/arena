@@ -27,6 +27,7 @@ glfw = "*"
 libgl-devel = "*"
 libegl-devel = "*"
 gtest = "*"
+cuda-cudart-dev = "*"
 
 [target.linux-64.dependencies]
 gcc_linux-64 = ">=14.3.0,<15"
@@ -37,14 +38,20 @@ sysroot_linux-aarch64 = ">=2.39"
 [tasks]
 configure = { cmd = "cmake -S $PIXI_PROJECT_ROOT -B $PIXI_PROJECT_ROOT/build/x86 -DCMAKE_PREFIX_PATH=$CONDA_PREFIX", description = "Configure CMake for x86" }
 compile = { cmd = "cmake --build $PIXI_PROJECT_ROOT/build/x86 --parallel 8", depends-on = ["configure"], description = "Compile arena for x86" }
+arena = { cmd = "$PIXI_PROJECT_ROOT/build/x86/main", env = { MODELS_DIR = "$PIXI_PROJECT_ROOT/external/colosseum/models"}, depends-on = ["compile"], description = "Run arena" }
 test = { cmd = "cd $PIXI_PROJECT_ROOT/build/x86 && ctest --output-on-failure", depends-on = ["compile"], description = "Run tests" }
+benchmark = { cmd = "$PIXI_PROJECT_ROOT/build/x86/benchmark --task t1-velocity-flat", env = { MODELS_DIR = "$PIXI_PROJECT_ROOT/external/colosseum/models" }, depends-on = ["compile", "build-engines"], description = "Benchmark ONNX vs TensorRT inference" }
+build-engines = { cmd = "TRT_BIN=\"$PIXI_PROJECT_ROOT/external/TensorRT/x86/targets/x86_64-linux-gnu/bin/trtexec\"; TRT_LIB=\"$PIXI_PROJECT_ROOT/external/TensorRT/x86/targets/x86_64-linux-gnu/lib\"; MODEL_DIR=\"$PIXI_PROJECT_ROOT/external/colosseum/models/t1-velocity-flat\"; LD_LIBRARY_PATH=\"$TRT_LIB\" \"$TRT_BIN\" --onnx=\"$MODEL_DIR/t1-velocity-flat_ppo_499580928.onnx\" --saveEngine=\"$MODEL_DIR/t1-velocity-flat_ppo_latest.engine\" --builderOptimizationLevel=5 --memPoolSize=workspace:2048M --skipInference", description = "Build TensorRT engine for t1-velocity-flat" }
 setup = { cmd = "bash $PIXI_PROJECT_ROOT/scripts/setup.sh", description = "One-time dev machine setup (TRT, Docker, sysroot)" }
 configure-aarch64 = { cmd = "pixi run -e robot _configure-aarch64", description = "Configure CMake for aarch64 cross-compilation" }
 compile-aarch64 = { cmd = "pixi run -e robot _compile-aarch64", description = "Cross-compile for aarch64" }
-sim = { cmd = "docker network rm CIRCUS_network 2>/dev/null || true; pixi run --manifest-path $PIXI_PROJECT_ROOT/external/circus/pixi.toml circus --scene $PIXI_PROJECT_ROOT/sim/scene.yaml --framework $PIXI_PROJECT_ROOT/sim/framework_booster.yaml", env = { FRAMEWORK_PATH = "$PIXI_PROJECT_ROOT" , JOYSTICK_DEVICE = "/dev/input/js2" }, depends-on = ["compile"], description = "Run booster sim2sim (booster-motion + simbridge + arena in docker)" }
+sim = { cmd = "docker network rm CIRCUS_network 2>/dev/null || true; pixi run --manifest-path $PIXI_PROJECT_ROOT/external/circus/pixi.toml circus --scene $CIRCUS_SCENE --framework $CIRCUS_FRAMEWORK", env = { CIRCUS_SCENE = "$PIXI_PROJECT_ROOT/sim/scene.yaml" , CIRCUS_FRAMEWORK = "$PIXI_PROJECT_ROOT/sim/framework_booster.yaml" , FRAMEWORK_PATH = "$PIXI_PROJECT_ROOT" , JOYSTICK_DEVICE = "/dev/input/js2" , INFERENCE_BACKEND = "trt" , TASK_NAME = "t1-velocity-flat" , BACKEND = "booster" }, depends-on = ["compile"], description = "Run booster sim2sim (TensorRT)" }
+sim-onnx = { cmd = "docker network rm CIRCUS_network 2>/dev/null || true; pixi run --manifest-path $PIXI_PROJECT_ROOT/external/circus/pixi.toml circus --scene $CIRCUS_SCENE --framework $CIRCUS_FRAMEWORK", env = { CIRCUS_SCENE = "$PIXI_PROJECT_ROOT/sim/scene.yaml" , CIRCUS_FRAMEWORK = "$PIXI_PROJECT_ROOT/sim/framework_booster.yaml" , FRAMEWORK_PATH = "$PIXI_PROJECT_ROOT" , JOYSTICK_DEVICE = "/dev/input/js2" , INFERENCE_BACKEND = "onnx" , TASK_NAME = "t1-velocity-flat" , BACKEND = "booster" }, depends-on = ["compile"], description = "Run booster sim2sim (ONNX Runtime)" }
 logs-arena = { cmd = "docker exec CIRCUS_red_Booster-T1_0_container tail -n 100 -f /var/log/arena.log /var/log/arena.err", description = "Tail arena logs" }
 logs-booster = { cmd = "docker exec CIRCUS_red_Booster-T1_0_container tail -n 100 -f /var/log/booster-motion.log /var/log/booster-motion.err", description = "Tail booster-motion logs" }
 logs-bridge = { cmd = "docker exec CIRCUS_red_Booster-T1_0_container tail -n 100 -f /var/log/simbridge.log /var/log/simbridge.err", description = "Tail simbridge logs" }
+setup-robot = { cmd = "bash $PIXI_PROJECT_ROOT/scripts/setup_robot.sh", description = "One-time robot setup: pack env, transfer, install service" }
+deploy = { cmd = "bash $PIXI_PROJECT_ROOT/scripts/deploy.sh", depends-on = ["compile-aarch64"], description = "Cross-compile, transfer binary, restart arena service on robot" }
 
 [feature.cross-compile.target.linux-64.dependencies]
 gcc_linux-aarch64 = ">=14.3.0,<15"
