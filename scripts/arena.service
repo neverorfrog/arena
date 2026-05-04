@@ -1,0 +1,25 @@
+[Unit]
+Description=Arena Robot Policy
+After=network.target
+
+[Service]
+Type=simple
+User=booster
+Group=booster
+SupplementaryGroups=video
+WorkingDirectory=/home/booster/spqr/arena
+Environment=FASTRTPS_DEFAULT_PROFILES_FILE=/opt/booster/fastdds_profile.xml
+Environment=ROS_DISTRO=humble
+Environment=ROS_VERSION=2
+Environment=ROS_LOCALHOST_ONLY=0
+Environment=AMENT_PREFIX_PATH=/opt/ros/humble
+Environment=LD_LIBRARY_PATH=/home/booster/spqr/arena/.pixi/aarch64-sysroot/lib
+Environment=MODELS_DIR=/home/booster/spqr/arena/models
+ExecStart=/home/booster/spqr/arena/build/aarch64/main --backend booster --task t1-velocity-flat
+Restart=on-abnormal
+RestartSec=5
+TimeoutStartSec=30
+TimeoutStopSec=30
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=arena
