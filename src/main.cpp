@@ -55,7 +55,7 @@ int main(int argc, char** argv) {
 #ifdef MUJOCO
         portal = std::make_unique<MujocoPortal>(MujocoConfig{}, cfg);
 #else
-        std::cerr << "gladius was built without MuJoCo/GLFW support. "
+        std::cerr << "arena was built without MuJoCo/GLFW support. "
                      "Rebuild with mujoco and glfw in the pixi environment.\n";
         return -1;
 #endif
@@ -87,26 +87,58 @@ int main(int argc, char** argv) {
     }
     if (terminated) return 0;
 
-    // Switch real robot to Custom mode (Booster only).
+    // ── Activation (booster backend only) ─────────────────────────────────────
     if (backend == "booster") {
-        // Move robot to safe prepare pose before starting the control loop.
-        auto* booster_portal = dynamic_cast<RobotPortal*>(portal.get());
-        booster_portal->prepare(cfg.robot.prepare_state);
-        if (!booster_portal || booster_portal->changeMode(booster::robot::RobotMode::kCustom) != 0) {
-            std::cerr << "Failed to switch robot to Custom mode.\n";
-            return -1;
+        auto* bp = dynamic_cast<RobotPortal*>(portal.get());
+        if (bp) {
+            const char* env = std::getenv("SPQR_SOUNDS_PATH");
+            bp->setSoundsPath(env ? env : std::string(PROJECT_ROOT) + "/sounds");
+            // Burst-hold at current position with prepare stiffness for 100ms.
+            // This ensures the DDS buffer has a safe target when kCustom activates,
+            // matching booster_deploy's hold+100ms sleep before mode switch.
+            std::array<float, 23> hold_pos;
+            const auto& s = portal->getState();
+            for (int i = 0; i < 23; i++) hold_pos[i] = s.joint_pos[i];
+            auto hold_start = std::chrono::steady_clock::now();
+            while (std::chrono::steady_clock::now() - hold_start < std::chrono::milliseconds(100)) {
+                bp->publishCommand(hold_pos.data(),
+                    cfg.robot.prepare_state.stiffness.data(),
+                    cfg.robot.prepare_state.damping.data());
+                std::this_thread::sleep_for(std::chrono::microseconds(2000));
+            }
+            // Switch to kCustom — firmware now reads our DDS commands.
+            if (bp->changeMode(booster::robot::RobotMode::kCustom) != 0) {
+                std::cerr << "Failed to switch robot to Custom mode.\n";
+                return -1;
+            }
+            // Interpolate from current position to prepare pose with stiff gains.
+            // booster_deploy does this AFTER kCustom at 500Hz for ~1s.
+            bp->smoothPrepare(cfg.robot.prepare_state);
+            // Hold at default pose with running gains for 1 second to let
+            // joint velocities decay before the policy starts.
+            {
+                auto settle_start = std::chrono::steady_clock::now();
+                while (std::chrono::steady_clock::now() - settle_start
+                       < std::chrono::milliseconds(1000)) {
+                    bp->publishCommand(cfg.robot.default_joint_pos.data(),
+                        cfg.robot.joint_stiffness.data(), cfg.robot.joint_damping.data());
+                    std::this_thread::sleep_for(std::chrono::microseconds(2000));
+                }
+            }
+            bp->playSound("start.wav");
+            std::cout << "[Arena] Activated (custom mode).\n" << std::flush;
         }
     }
-    // circus and mujoco backends need no mode switch.
 
-    // Main control loop.
+    // ── Main control loop ─────────────────────────────────────────────────────
     policy->reset();
-    std::array<float, TaskConfig::NUM_JOINTS> targets;
+    std::array<float, TaskConfig::NUM_JOINTS> targets{};
 
     while (!terminated && portal->shouldContinue()) {
         portal->updateState();
         targets = policy->get_action(portal->getState());
-        portal->publishCommand(targets.data(), cfg.robot.joint_stiffness.data(), cfg.robot.joint_damping.data());
+        portal->publishCommand(targets.data(),
+            cfg.robot.joint_stiffness.data(), cfg.robot.joint_damping.data());
         portal->tick();
     }
 

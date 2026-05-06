@@ -28,7 +28,8 @@ KeyboardInput::KeyboardInput() {
         return;
     }
 
-    std::cout << "[KeyboardInput] w/s forward-back | a/d left-right | q/e yaw | space stop\n";
+    std::cout << "[KeyboardInput] w/s forward-back | a/d left-right | q/e yaw | space stop\n"
+              << "[KeyboardInput] combos: 3(RB) r(RT) 1(A)=activate | 3 r 2(B)=deactivate | 3 r=estop\n";
     thread_ = std::thread(&KeyboardInput::listenLoop, this);
 }
 
@@ -39,6 +40,11 @@ KeyboardInput::~KeyboardInput() {
 float KeyboardInput::get_axis(int index) const {
     if (index < 0 || index >= kMaxAxes) return 0.0f;
     return axes_[index].load();
+}
+
+bool KeyboardInput::get_button(int index) const {
+    if (index < 0 || index >= kMaxButtons) return false;
+    return buttons_[index].load();
 }
 
 void KeyboardInput::stop() {
@@ -52,6 +58,7 @@ void KeyboardInput::applyKey(char key) {
     // Axis 0 (left stick X): A = left (+), D = right (-)
     // Axis 3 (right stick X): Q = left (+), E = right (-)
     auto& ax1 = axes_[1]; auto& ax0 = axes_[0]; auto& ax3 = axes_[3];
+    auto& ax5 = axes_[5];
     switch (key) {
         case 'w': ax1.store(std::min(ax1.load() + kStep,  1.0f)); break;
         case 's': ax1.store(std::max(ax1.load() - kStep, -1.0f)); break;
@@ -62,6 +69,11 @@ void KeyboardInput::applyKey(char key) {
         case ' ':
             for (auto& a : axes_) a.store(0.0f);
             break;
+        // Button toggles (joystick combo simulation)
+        case '1': buttons_[0].store(!buttons_[0].load()); break;  // A (play)
+        case '2': buttons_[1].store(!buttons_[1].load()); break;  // B (manual)
+        case '3': buttons_[5].store(!buttons_[5].load()); break;  // RB
+        case 'r': ax5.store(ax5.load() > 0.5f ? 0.0f : 1.0f); break; // RT toggle
         default: break;
     }
 }

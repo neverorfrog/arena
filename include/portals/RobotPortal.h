@@ -66,9 +66,13 @@ class RobotPortal : public IPortal {
         }
 
         // Move the robot to the safe prepare pose before starting the control
-        // loop. Sends position commands at prepare_state stiffness/damping for
-        // prep.duration_s seconds. Call after changeMode(kCustom).
-        void prepare(const PrepareStateConfig<23>& prep);
+        // loop. Interpolates from current joint positions to the prepare pose
+        // over prep.duration_s seconds, using prepare stiffness/damping.
+        // Call AFTER changeMode(kCustom).
+        void smoothPrepare(const PrepareStateConfig<23>& prep);
+
+        void setSoundsPath(const std::string& path) { sounds_path_ = path; }
+        void playSound(const std::string& name) { client.PlaySound(sounds_path_ + "/" + name); }
 
     private:
         // State
@@ -94,4 +98,10 @@ class RobotPortal : public IPortal {
         float policy_dt_;
         using Clock = std::chrono::steady_clock;
         Clock::time_point next_tick_{};
+
+        // Sound path (set from env, used by playSound)
+        std::string sounds_path_;
+
+        // Diagnostic logging
+        int debug_counter_ = 0;
 };

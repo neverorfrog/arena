@@ -22,18 +22,20 @@ public:
     ~KeyboardInput() override;
 
     float get_axis(int index)   const override;
-    bool  get_button(int index) const override { return false; }
+    bool  get_button(int index) const override;
     void  stop()                      override;
 
 private:
-    static constexpr int   kMaxAxes = 8;
-    static constexpr float kStep    = 0.1f;
+    static constexpr int   kMaxAxes   = 8;
+    static constexpr int   kMaxButtons = 8;
+    static constexpr float kStep      = 0.1f;
 
     std::atomic<bool>  stop_{false};
     std::thread        thread_;
     termios            old_tio_{};
 
-    std::array<std::atomic<float>, kMaxAxes> axes_{};
+    std::array<std::atomic<float>, kMaxAxes>    axes_{};
+    std::array<std::atomic<bool>,  kMaxButtons> buttons_{};
 
     void listenLoop();
     void applyKey(char key);

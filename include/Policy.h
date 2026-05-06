@@ -8,6 +8,8 @@
 #include "RobotData.h"
 #include "RobotState.h"
 #include "TaskConfig.h"
+#include <iomanip>
+#include <iostream>
 #include <memory>
 
 inline std::unique_ptr<IInferenceEngine> make_engine(const TaskConfig& cfg) {
@@ -64,6 +66,26 @@ public:
         Eigen::VectorXf obs_vec = Eigen::Map<Eigen::VectorXf>(observation.data(), observation.size());
         Eigen::VectorXf action_vec = engine_->infer(obs_vec);
 
+        if (config_.debug) {
+            static int dbg_step = 0;
+            if (dbg_step % 50 == 0) {
+                std::cout << std::fixed << std::setprecision(4);
+                // obs min/max
+                float omin = 999, omax = -999;
+                for (float v : observation) { if (v < omin) omin = v; if (v > omax) omax = v; }
+                std::cout << "obs[0-2]:    [" << observation[0] << " " << observation[1]
+                          << " " << observation[2] << "] (range " << omin << ".." << omax << ")\n";
+                // action_vec min/max
+                float amin = 999, amax = -999;
+                for (int i = 0; i < TaskConfig::NUM_JOINTS; i++) {
+                    if (action_vec[i] < amin) amin = action_vec[i];
+                    if (action_vec[i] > amax) amax = action_vec[i];
+                }
+                std::cout << "net_out:     " << amin << " .. " << amax << "\n" << std::flush;
+            }
+            dbg_step++;
+        }
+
         // Store last_action in sim order (used by build_observation next step).
         for (int i = 0; i < TaskConfig::NUM_JOINTS; i++)
             last_action[i] = action_vec[i];
@@ -79,7 +101,10 @@ public:
         return action;
     }
 
+    void set_debug(bool on) { config_.debug = on; }
+
     const TaskConfig& config() const { return config_; }
+    IInputSource* get_input_source() const { return input_source_.get(); }
 
 protected:
     TaskConfig config_;
