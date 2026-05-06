@@ -114,6 +114,17 @@ int main(int argc, char** argv) {
             // Interpolate from current position to prepare pose with stiff gains.
             // booster_deploy does this AFTER kCustom at 500Hz for ~1s.
             bp->smoothPrepare(cfg.robot.prepare_state);
+            // Hold at default pose with running gains for 1 second to let
+            // joint velocities decay before the policy starts.
+            {
+                auto settle_start = std::chrono::steady_clock::now();
+                while (std::chrono::steady_clock::now() - settle_start
+                       < std::chrono::milliseconds(1000)) {
+                    bp->publishCommand(cfg.robot.default_joint_pos.data(),
+                        cfg.robot.joint_stiffness.data(), cfg.robot.joint_damping.data());
+                    std::this_thread::sleep_for(std::chrono::microseconds(2000));
+                }
+            }
             bp->playSound("start.wav");
             std::cout << "[Arena] Activated (custom mode).\n" << std::flush;
         }
@@ -121,7 +132,7 @@ int main(int argc, char** argv) {
 
     // ── Main control loop ─────────────────────────────────────────────────────
     policy->reset();
-    std::array<float, TaskConfig::NUM_JOINTS> targets;
+    std::array<float, TaskConfig::NUM_JOINTS> targets{};
 
     while (!terminated && portal->shouldContinue()) {
         portal->updateState();

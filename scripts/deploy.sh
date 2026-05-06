@@ -6,7 +6,8 @@
 #   -u, --user USER     SSH username    (default: booster)
 #   --path PATH         Install path on robot (default: ~/spqr/arena)
 #   --skip-build        Skip cross-compilation (reuse existing binary)
-#   --skip-restart      Skip service restart after deploy
+#   --skip-restart      Skip service restart after deploy (default)
+#   --restart           Restart arena service after deploy
 
 set -e
 
@@ -17,7 +18,7 @@ ROBOT_IP="${ROBOT_IP:-192.168.10.102}"
 ROBOT_PATH="${ROBOT_PATH:-~/spqr/arena}"
 ROBOT_PASSWORD="${ROBOT_PASSWORD:-123456}"
 SKIP_BUILD=false
-SKIP_RESTART=false
+SKIP_RESTART=true
 
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -26,6 +27,7 @@ while [[ $# -gt 0 ]]; do
         --path)         ROBOT_PATH="$2"; shift 2 ;;
         --skip-build)   SKIP_BUILD=true;  shift ;;
         --skip-restart) SKIP_RESTART=true; shift ;;
+        --restart)      SKIP_RESTART=false; shift ;;
         -h|--help)      head -n 11 "$0" | tail -n +2 | sed 's/^# \?//'; exit 0 ;;
         *) echo -e "${RED}Unknown option: $1${NC}"; exit 1 ;;
     esac
@@ -87,8 +89,8 @@ echo -e "  ${GREEN}✓${NC} Files transferred"
 echo
 
 # ── Step 3: Restart service ──────────────────────────────────────────────────
-echo -e "${GREEN}[3/3] Restarting arena service...${NC}"
 if [ "$SKIP_RESTART" = false ]; then
+    echo -e "${GREEN}[3/3] Restarting arena service...${NC}"
     if ssh $SSH_OPTS "$ROBOT" "systemctl is-active --quiet arena" 2>/dev/null; then
         ssh $SSH_OPTS "$ROBOT" "$RSUDO systemctl restart arena"
         echo -e "  ${GREEN}✓${NC} Service restarted"

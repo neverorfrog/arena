@@ -204,33 +204,33 @@ class T1VelocityFlat : public Policy {
             // Mechanically coupled ankle pairs (crank mechanism).
             cfg.robot.parallel_joint_indices = {15, 16, 21, 22};
 
-            // ── Safe startup sequence (real robot only) ───────────────────────
-            // Stiffness matches booster_deploy T1 prepare and Gait kp_test
-            // (kp=350 hips/knees, kp=450 ankles) — much stiffer than running.
-            cfg.robot.prepare_state.duration_s    = 3.0f;
+            // ── Safe startup sequence ─────────────────────────────────────
+            // Prepare gains: stiff enough to hold pose, damped enough to
+            // prevent oscillation. Ankle kd raised from 0.5 to 2.0.
+            cfg.robot.prepare_state.duration_s    = 1.0f;
             cfg.robot.prepare_state.stiffness     = {
-                5.0f,   5.0f,                                         // Head
-                40.0f,  50.0f,  20.0f, 10.0f,                        // Left arm
-                40.0f,  50.0f,  20.0f, 10.0f,                        // Right arm
-                100.0f,                                               // Waist
-                350.0f, 350.0f, 180.0f, 350.0f, 450.0f, 450.0f,      // Left leg
-                350.0f, 350.0f, 180.0f, 350.0f, 450.0f, 450.0f,      // Right leg
+                5.0f,   5.0f,
+                40.0f,  50.0f,  20.0f, 10.0f,
+                40.0f,  50.0f,  20.0f, 10.0f,
+                100.0f,
+                200.0f, 200.0f, 100.0f, 200.0f, 100.0f, 100.0f,
+                200.0f, 200.0f, 100.0f, 200.0f, 100.0f, 100.0f,
             };
             cfg.robot.prepare_state.damping       = {
-                0.1f,  0.1f,
-                0.5f,  1.5f, 0.2f, 0.2f,
-                0.5f,  1.5f, 0.2f, 0.2f,
+                0.5f,  0.5f,
+                1.0f,  2.0f, 0.5f, 0.5f,
+                1.0f,  2.0f, 0.5f, 0.5f,
                 5.0f,
-                7.5f, 7.5f, 3.0f, 5.5f, 0.5f, 0.5f,
-                7.5f, 7.5f, 3.0f, 5.5f, 0.5f, 0.5f,
+                5.0f, 5.0f, 3.0f, 5.0f, 3.0f, 3.0f,
+                5.0f, 5.0f, 3.0f, 5.0f, 3.0f, 3.0f,
             };
             cfg.robot.prepare_state.joint_pos     = {
                 0.0f,  0.0f,
                 0.2f, -1.3f, 0.0f, -0.5f,
                 0.2f,  1.3f, 0.0f,  0.5f,
                 0.0f,
-                -0.15f, 0.0f, 0.0f, 0.2f, -0.10f, 0.0f,
-                -0.15f, 0.0f, 0.0f, 0.2f, -0.10f, 0.0f,
+                -0.2f, 0.0f, 0.0f, 0.4f, -0.2f, 0.0f,
+                -0.2f, 0.0f, 0.0f, 0.4f, -0.2f, 0.0f,
             };
 
             return cfg;
