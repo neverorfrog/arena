@@ -6,7 +6,7 @@
 // Describes the observation vector layout as a named list of components.
 //
 // Concrete specs are defined inline in each task's .cpp (e.g. VelocityObservationSpec
-// in T1VelocityFlat.cpp). The validate_size() method is called at the end of
+// in T1Velocity.cpp). The validate_size() method is called at the end of
 // build_observation() under #ifndef NDEBUG to catch layout mismatches at
 // startup rather than at inference time.
 //

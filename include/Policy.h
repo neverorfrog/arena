@@ -33,7 +33,7 @@ inline std::unique_ptr<IInferenceEngine> make_engine(const TaskConfig& cfg) {
 // A Policy owns the inference engine, the input source, and drives the
 // inference loop. Subclasses implement build_observation() to match training,
 // and optionally override update_input() to read from input_source_ and update
-// task-specific state (e.g. a VelocityCommand in T1VelocityFlat).
+// task-specific state (e.g. a VelocityCommand in T1Velocity).
 //
 // Execution flow per step:
 //   1. reset()           — zero last_action before the first step
@@ -96,7 +96,7 @@ public:
         std::array<float, TaskConfig::NUM_JOINTS> action{};
         for (int i = 0; i < TaskConfig::NUM_JOINTS; i++) {
             int s = robot_data_.sim2real[i];
-            action[i] = action_vec[s] * config_.action_scale + config_.robot.default_joint_pos[i];
+            action[i] = action_vec[s] * config_.action_scale[s] + config_.robot.default_joint_pos[i];
         }
         return action;
     }

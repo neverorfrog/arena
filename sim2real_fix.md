@@ -105,11 +105,11 @@ The T1 ankle has a parallel crank mechanism with only **12 Nm effort limit** (vs
 
 ### ✅ Fixed: Ankle damping 2.0 → 3.0
 
-`src/tasks/T1VelocityFlat.cpp:188` — changed ankle damping from 2.0 to 3.0 Nm·s/rad to match colosseum training (`actuators.py:181`).
+`src/tasks/T1Velocity.cpp:188` — changed ankle damping from 2.0 to 3.0 Nm·s/rad to match colosseum training (`actuators.py:181`).
 
 ### Note: `parallel_joint_indices` is dead config
 
-`T1VelocityFlat.cpp:205` sets `cfg.robot.parallel_joint_indices = {15, 16, 21, 22}` but no portal consumes this. Neither booster_deploy nor holosoma use deployment-side parallel mechanism handling (only the original booster_gym deploy did, and booster_gym's successor frameworks all dropped it in favor of DR during training). Keep the config field but don't implement deployment-side torque conversion — fix it in training instead.
+`T1Velocity.cpp:205` sets `cfg.robot.parallel_joint_indices = {15, 16, 21, 22}` but no portal consumes this. Neither booster_deploy nor holosoma use deployment-side parallel mechanism handling (only the original booster_gym deploy did, and booster_gym's successor frameworks all dropped it in favor of DR during training). Keep the config field but don't implement deployment-side torque conversion — fix it in training instead.
 
 ---
 

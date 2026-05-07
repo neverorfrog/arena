@@ -12,13 +12,14 @@ struct TaskConfig {
     using Robot = RobotConfig<NUM_JOINTS>;
 
     std::string task_name;
+    std::string model_name;       // Named model to load (empty = default)
     std::string model_path;       // Path to ONNX checkpoint (resolved by ModelRegistry)
     float       policy_dt   = 0.02f;  // Policy step period (s) — 50 Hz
 
-    // Uniform action scale applied to all joints.
-    // Decoded action: target[i] = net_out[i] * action_scale + robot.default_joint_pos[i]
+    // Per-joint action scale.
+    // Decoded action: target[i] = net_out[i] * action_scale[i] + robot.default_joint_pos[i]
     // Must match training: typically 0.25 (Python PolicyConfig.action_scale).
-    float action_scale = 0.25f;
+    std::array<float, NUM_JOINTS> action_scale{};
 
     // Inference backend: "onnx" (default) or "trt" (TensorRT).
     // Threaded through Policy → make_engine() factory.

@@ -1,3 +1,6 @@
+#include <cmath>
+
+#include "GaitPhaseCommand.h"
 #include "ModelRegistry.h"
 #include "ObservationSpec.h"
 #include "Policy.h"
@@ -17,6 +20,7 @@ struct VelocityObservationSpec : ObservationSpec {
             {"joint_vel",    23},
             {"last_action",  23},
             {"vel_command",   3},
+            {"phase_command", 4}
         };
     }
 };
@@ -30,17 +34,19 @@ struct VelocityObservationSpec : ObservationSpec {
 //   [29:52] joint velocities (rad/s)
 //   [52:75] last action (raw network output, before scaling)
 //   [75:78] velocity command [vx, vy, omega]
+//   [78:82] gait phase [cos(φ_L), cos(φ_R), sin(φ_L), sin(φ_R)]
 //
 // Action decoding (per joint i):
 //   target[i] = net_out[i] * action_scale[i] + default_joint_pos[i]
-//   where action_scale[i] = 0.25 * effort_limit[i] / kp[i]
+//   where action_scale[i] = 0.25 (matches Python ACTION_SCALE in constants.py)
 //
 // Joint ordering follows robot.joint_names (hardware order) and
 // robot.sim_joint_names (MuJoCo compiled order). For T1 these are identical.
-class T1VelocityFlat : public Policy {
+class T1Velocity : public Policy {
     public:
-        T1VelocityFlat(const std::string& inference_backend = "onnx")
-            : Policy(make_config(inference_backend)) {
+        T1Velocity(const std::string& model_name = "",
+                   const std::string& inference_backend = "onnx")
+            : Policy(make_config(model_name, inference_backend)) {
             input_source_ = create_input_source();
         }
 
@@ -48,6 +54,9 @@ class T1VelocityFlat : public Policy {
         // Task-specific command. Scaled from input_source_ axes by update_input().
         // Limits (1 m/s, 1 m/s, 1 rad/s) match training VelocityCommandConfig.
         VelocityCommand vel_command_{VelocityCommandConfig{1.0f, 1.0f, 1.0f}};
+
+        // Gait phase clock — matches training GaitPhaseCommand.
+        GaitPhaseCommand gait_phase_{};
 
         // Read joystick/keyboard axes and convert to velocity command.
         // Axis mapping (Linux joystick numbering):
@@ -122,18 +131,27 @@ class T1VelocityFlat : public Policy {
             }
             obs_diag++;
 
+            // 7. Gait phase (4) — advance clock and push [cos(φ_L), cos(φ_R), sin(φ_L), sin(φ_R)]
+            float horiz_speed = std::hypot(vel_command_.vx, vel_command_.vy);
+            gait_phase_.advance(config_.policy_dt, horiz_speed);
+            for (float v : gait_phase_.command()) observation.push_back(v);
+
 #ifndef NDEBUG
             spec.validate_size(static_cast<int>(observation.size()));
 #endif
         }
 
-        static TaskConfig make_config(const std::string& inference_backend = "onnx") {
+        static TaskConfig make_config(const std::string& model_name = "",
+                                      const std::string& inference_backend = "onnx") {
             TaskConfig cfg;
             cfg.inference_backend = inference_backend;
-            cfg.task_name    = "t1-velocity-flat";
-            cfg.model_path   = ModelRegistry::resolve(cfg.task_name).string();
+            cfg.task_name    = "t1-velocity";
+            cfg.model_name   = model_name;
+            cfg.model_path   = model_name.empty()
+                ? ModelRegistry::resolve(cfg.task_name).string()
+                : ModelRegistry::resolve(cfg.task_name, model_name).string();
             cfg.policy_dt    = 0.02f;
-            cfg.action_scale = 0.25f;
+            cfg.action_scale.fill(0.25f);
 
             // ── Scene (MujocoPortal) ──────────────────────────────────────────
             // PROJECT_ROOT is injected by CMake as the repository root.
@@ -237,4 +255,4 @@ class T1VelocityFlat : public Policy {
         }
 };
 
-REGISTER_TASK("t1-velocity-flat", T1VelocityFlat);
+REGISTER_TASK("t1-velocity", T1Velocity);

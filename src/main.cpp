@@ -27,7 +27,8 @@ int main(int argc, char** argv) {
     //              --inference onnx|trt
     //              --host <ip>  --port <n>  --robot <name>
     std::string backend    = "booster";
-    std::string task_name  = "t1-velocity-flat";
+    std::string task_name  = "t1-velocity";
+    std::string model_name;
     std::string inference_backend = "onnx";
     std::string circus_host = "127.0.0.1";
     int         circus_port = 5555;
@@ -35,6 +36,7 @@ int main(int argc, char** argv) {
     for (int i = 0; i < argc; i++) {
         if (std::strcmp(argv[i], "--backend")   == 0 && i + 1 < argc) backend      = argv[++i];
         if (std::strcmp(argv[i], "--task")      == 0 && i + 1 < argc) task_name    = argv[++i];
+        if (std::strcmp(argv[i], "--model")     == 0 && i + 1 < argc) model_name   = argv[++i];
         if (std::strcmp(argv[i], "--inference") == 0 && i + 1 < argc) inference_backend = argv[++i];
         if (std::strcmp(argv[i], "--host")      == 0 && i + 1 < argc) circus_host  = argv[++i];
         if (std::strcmp(argv[i], "--port")      == 0 && i + 1 < argc) circus_port  = std::stoi(argv[++i]);
@@ -42,7 +44,7 @@ int main(int argc, char** argv) {
     }
 
     // Create and initialize policy.
-    auto policy = TaskRegistry::instance().create(task_name, inference_backend);
+    auto policy = TaskRegistry::instance().create(task_name, model_name, inference_backend);
     const TaskConfig& cfg = policy->config();
     std::cout << "Task     : " << cfg.task_name << "\n"
               << "Model    : " << cfg.model_path << "\n"

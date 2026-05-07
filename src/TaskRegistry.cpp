@@ -12,10 +12,16 @@ void TaskRegistry::register_task(const std::string& name, Factory factory) {
 
 std::unique_ptr<Policy> TaskRegistry::create(const std::string& name,
                                       const std::string& inference_backend) const {
+    return create(name, "", inference_backend);
+}
+
+std::unique_ptr<Policy> TaskRegistry::create(const std::string& name,
+                                      const std::string& model_name,
+                                      const std::string& inference_backend) const {
     auto it = factories_.find(name);
     if (it == factories_.end())
         throw std::runtime_error("TaskRegistry: unknown task '" + name + "'");
-    return it->second(inference_backend);
+    return it->second(model_name, inference_backend);
 }
 
 bool TaskRegistry::has(const std::string& name) const {
