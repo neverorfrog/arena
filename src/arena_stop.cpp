@@ -92,8 +92,8 @@ int main() {
 
         bool lb = msg.lb();
         bool rb = msg.rb();
-        bool start = msg.start();
-        if (lb && rb && start)
+        bool back = msg.back();
+        if (lb && rb && back)
             emergencyStop();
 
         std::this_thread::sleep_for(std::chrono::milliseconds(20));

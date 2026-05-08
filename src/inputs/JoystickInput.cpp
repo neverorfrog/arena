@@ -88,15 +88,18 @@ std::unique_ptr<IInputSource> create_input_source() {
 
     std::cout << "[input] Joystick not available at " << device << "\n";
 
-    // Try DDS remote controller (robot has no evdev joystick — joystick
-    // state is published by MCU firmware on rt/remote_controller_state).
-    try {
-        auto dds = std::make_unique<DDSRemoteInput>();
-        std::cout << "[input] Using DDS remote controller.\n";
-        return dds;
-    } catch (...) {
-        std::cout << "[input] DDS remote controller unavailable"
-                  << " — falling back to keyboard.\n";
+    if (std::getenv("FASTRTPS_DEFAULT_PROFILES_FILE")) {
+        try {
+            auto dds = std::make_unique<DDSRemoteInput>();
+            std::cout << "[input] Using DDS remote controller.\n";
+            return dds;
+        } catch (...) {
+            std::cout << "[input] DDS remote controller unavailable"
+                      << " — falling back to keyboard.\n";
+        }
+    } else {
+        std::cout << "[input] DDS not configured (FASTRTPS_DEFAULT_PROFILES_FILE"
+                  << " not set) — falling back to keyboard.\n";
     }
 
     return std::make_unique<KeyboardInput>();

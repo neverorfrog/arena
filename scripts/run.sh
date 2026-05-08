@@ -25,7 +25,7 @@ case "$1" in
         ;;
     run|runner)
         activate_env
-        exec build/aarch64/main --backend booster --task t1-velocity-flat
+        exec build/aarch64/main --backend booster --task t1-velocity
         ;;
     benchmark)
         shift

@@ -95,6 +95,7 @@ int main(int argc, char** argv) {
         if (bp) {
             const char* env = std::getenv("SPQR_SOUNDS_PATH");
             bp->setSoundsPath(env ? env : std::string(PROJECT_ROOT) + "/sounds");
+            bp->playSound("start.wav");
             // Burst-hold at current position with prepare stiffness for 100ms.
             // This ensures the DDS buffer has a safe target when kCustom activates,
             // matching booster_deploy's hold+100ms sleep before mode switch.
@@ -116,18 +117,17 @@ int main(int argc, char** argv) {
             // Interpolate from current position to prepare pose with stiff gains.
             // booster_deploy does this AFTER kCustom at 500Hz for ~1s.
             bp->smoothPrepare(cfg.robot.prepare_state);
-            // Hold at default pose with running gains for 1 second to let
+            // Hold at default pose with running gains for 0.1 seconds to let
             // joint velocities decay before the policy starts.
-            {
-                auto settle_start = std::chrono::steady_clock::now();
-                while (std::chrono::steady_clock::now() - settle_start
-                       < std::chrono::milliseconds(1000)) {
-                    bp->publishCommand(cfg.robot.default_joint_pos.data(),
-                        cfg.robot.joint_stiffness.data(), cfg.robot.joint_damping.data());
-                    std::this_thread::sleep_for(std::chrono::microseconds(2000));
-                }
-            }
-            bp->playSound("start.wav");
+            // {
+            //     auto settle_start = std::chrono::steady_clock::now();
+            //     while (std::chrono::steady_clock::now() - settle_start
+            //            < std::chrono::milliseconds(100)) {
+            //         bp->publishCommand(cfg.robot.default_joint_pos.data(),
+            //             cfg.robot.joint_stiffness.data(), cfg.robot.joint_damping.data());
+            //         std::this_thread::sleep_for(std::chrono::microseconds(2000));
+            //     }
+            // }
             std::cout << "[Arena] Activated (custom mode).\n" << std::flush;
         }
     }

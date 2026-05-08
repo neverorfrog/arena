@@ -13,7 +13,7 @@ struct PrepareStateConfig {
     std::array<float, N> joint_pos{};   // safe starting pose (rad)
     std::array<float, N> stiffness{};   // reduced Kp during preparation
     std::array<float, N> damping{};     // Kd during preparation
-    float                duration_s = 3.0f;
+    float                duration_s = 5.0f;
 };
 
 // Robot hardware specification. Task-agnostic: does not know about observations,

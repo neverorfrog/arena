@@ -71,8 +71,8 @@ int main() {
 
         bool lb = msg.lb();
         bool rb = msg.rb();
-        bool back = msg.back();
-        if (lb && rb && back)
+        bool start = msg.start();
+        if (lb && rb && start)
             startArena();
 
         std::this_thread::sleep_for(std::chrono::milliseconds(20));
