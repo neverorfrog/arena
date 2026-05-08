@@ -2,10 +2,6 @@
 	path = external/simbridge
 	url = https://github.com/SPQRTeam/simbridge.git
 	branch = dependency-inversion
-[submodule "external/colosseum"]
-	path = external/colosseum
-	url = https://github.com/neverorfrog/colosseum.git
-	branch = main
 [submodule "external/circus"]
 	path = external/circus
 	url = https://github.com/SPQRTeam/circus.git
