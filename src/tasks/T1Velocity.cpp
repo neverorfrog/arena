@@ -58,23 +58,52 @@ class T1Velocity : public Policy {
         // Gait phase clock — matches training GaitPhaseCommand.
         GaitPhaseCommand gait_phase_{};
 
+        // Heading lock state — mirrors training rel_heading_envs=1.0 play mode.
+        // When the joystick yaw axis is near zero, lock to the current heading
+        // and compute a corrective vyaw via a P-controller (stiffness=0.5 rad/s/rad,
+        // matching heading_control_stiffness in the training env).
+        float last_yaw_       = 0.0f;
+        float heading_target_ = 0.0f;
+        bool  heading_locked_ = false;
+
+        static float wrap_to_pi(float a) {
+            while (a >  M_PI) a -= 2.0f * M_PI;
+            while (a < -M_PI) a += 2.0f * M_PI;
+            return a;
+        }
+
         // Read joystick/keyboard axes and convert to velocity command.
         // Axis mapping (Linux joystick numbering):
         //   axis 1 (left stick Y, negated) → vx
         //   axis 0 (left stick X, negated) → vy
         //   axis 3 (right stick X, negated) → vyaw
+        //
+        // When the yaw axis is near zero the heading is locked and vyaw becomes
+        // a P-controller correction toward heading_target_ (same as training
+        // heading mode with heading_control_stiffness=0.5).
         void update_input() override {
             if (!input_source_) return;
-            vel_command_.set_normalized(
-                -input_source_->get_axis(1),
-                -input_source_->get_axis(0),
-                -input_source_->get_axis(3)
-            );
+            vel_command_.vx = -input_source_->get_axis(1) * vel_command_.vx_max;
+            vel_command_.vy = -input_source_->get_axis(0) * vel_command_.vy_max;
+            const float raw_yaw = -input_source_->get_axis(3);
+            if (std::abs(raw_yaw) < 0.05f) {
+                if (!heading_locked_) {
+                    heading_locked_  = true;
+                    heading_target_ = last_yaw_;
+                }
+                const float err = wrap_to_pi(heading_target_ - last_yaw_);
+                vel_command_.vyaw = std::clamp(0.5f * err, -vel_command_.vyaw_max, vel_command_.vyaw_max);
+            } else {
+                heading_locked_ = false;
+                heading_target_ = last_yaw_;
+                vel_command_.vyaw = raw_yaw * vel_command_.vyaw_max;
+            }
         }
 
         void build_observation(const RobotState& state) override {
             static const VelocityObservationSpec spec;
             observation.clear();
+            last_yaw_ = state.rpy[2];
 
             // 1. Base angular velocity (3)
             observation.push_back(state.gyro[0]);
