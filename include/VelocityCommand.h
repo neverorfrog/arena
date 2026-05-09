@@ -32,7 +32,7 @@ struct VelocityCommand {
 
     // Called by joystick input: norm_* are deadzone-filtered values in [-1, 1].
     void set_normalized(float norm_vx, float norm_vy, float norm_vyaw) {
-        vx   = norm_vx   * vx_max;
+        vx   = 0.2;
         vy   = norm_vy   * vy_max;
         vyaw = norm_vyaw * vyaw_max;
     }

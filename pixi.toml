@@ -52,6 +52,8 @@ logs-booster = { cmd = "docker exec CIRCUS_red_Booster-T1_0_container tail -n 10
 logs-bridge = { cmd = "docker exec CIRCUS_red_Booster-T1_0_container tail -n 100 -f /var/log/simbridge.log /var/log/simbridge.err", description = "Tail simbridge logs" }
 setup-robot = { cmd = "bash $PIXI_PROJECT_ROOT/scripts/setup_robot.sh", description = "One-time robot setup: pack env, transfer, install service" }
 deploy = { cmd = "bash $PIXI_PROJECT_ROOT/scripts/deploy.sh", depends-on = ["compile-aarch64"], description = "Cross-compile, transfer binary, restart arena service on robot" }
+profile = { cmd = "bash $PIXI_PROJECT_ROOT/scripts/profile.sh", description = "Manage robot profiles (set, remove, list, show)" }
+robot = { cmd = "bash $PIXI_PROJECT_ROOT/scripts/robot.sh", description = "Remote robot management (start, stop, logs, ssh, etc.)" }
 
 [feature.cross-compile.target.linux-64.dependencies]
 gcc_linux-aarch64 = ">=14.3.0,<15"

@@ -83,21 +83,26 @@ class T1Velocity : public Policy {
         // heading mode with heading_control_stiffness=0.5).
         void update_input() override {
             if (!input_source_) return;
-            vel_command_.vx = -input_source_->get_axis(1) * vel_command_.vx_max;
-            vel_command_.vy = -input_source_->get_axis(0) * vel_command_.vy_max;
-            const float raw_yaw = -input_source_->get_axis(3);
-            if (std::abs(raw_yaw) < 0.05f) {
-                if (!heading_locked_) {
-                    heading_locked_  = true;
-                    heading_target_ = last_yaw_;
-                }
-                const float err = wrap_to_pi(heading_target_ - last_yaw_);
-                vel_command_.vyaw = std::clamp(0.5f * err, -vel_command_.vyaw_max, vel_command_.vyaw_max);
-            } else {
-                heading_locked_ = false;
-                heading_target_ = last_yaw_;
-                vel_command_.vyaw = raw_yaw * vel_command_.vyaw_max;
-            }
+            // vel_command_.vx = -input_source_->get_axis(1) * vel_command_.vx_max;
+            // vel_command_.vy = -input_source_->get_axis(0) * vel_command_.vy_max;
+            // const float raw_yaw = -input_source_->get_axis(3);
+            // if (std::abs(raw_yaw) < 0.05f) {
+            //     if (!heading_locked_) {
+            //         heading_locked_  = true;
+            //         heading_target_ = last_yaw_;
+            //     }
+            //     const float err = wrap_to_pi(heading_target_ - last_yaw_);
+            //     vel_command_.vyaw = std::clamp(0.5f * err, -vel_command_.vyaw_max, vel_command_.vyaw_max);
+            // } else {
+            //     heading_locked_ = false;
+            //     heading_target_ = last_yaw_;
+            //     vel_command_.vyaw = raw_yaw * vel_command_.vyaw_max;
+            // }
+            vel_command_.set_normalized(
+                -input_source_->get_axis(1),
+                -input_source_->get_axis(0),
+                -input_source_->get_axis(3)
+            );
         }
 
         void build_observation(const RobotState& state) override {

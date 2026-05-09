@@ -1,6 +1,7 @@
-default: v5
 versions:
   v5:
     path: v5/t1-velocity_ppo_v5.onnx
   v3:
     path: v3/t1-velocity_ppo_v3.onnx
+  v1:
+    path: v1/t1-velocity_ppo_v1.onnx

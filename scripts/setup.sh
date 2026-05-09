@@ -67,7 +67,7 @@ extract() {
 }
 
 build_trt_engines() {
-    for model_dir in "$ROOT"/external/colosseum/models/*/; do
+    for model_dir in "$ROOT"/models/*/; do
         local raw_onnx="${model_dir}raw/$(basename "$model_dir").onnx"
         local engine="${model_dir}$(basename "$model_dir")/$(basename "$model_dir").engine"
         [ -f "$raw_onnx" ] || continue

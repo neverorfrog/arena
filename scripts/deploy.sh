@@ -2,7 +2,9 @@
 # Deploy arena to the robot: cross-compile, transfer binary, restart service.
 #
 # Options:
-#   -i, --ip IP         Robot IP address (default: 192.168.10.102)
+#   -r, --robot NAME    Robot profile name (from scripts/.arena_profiles)
+#   --wireless           Use wireless IP (10.0.19.X) instead of wired (192.168.19.X)
+#   -i, --ip IP         Direct robot IP (overrides -r)
 #   -u, --user USER     SSH username    (default: booster)
 #   --path PATH         Install path on robot (default: ~/spqr/arena)
 #   --skip-build        Skip cross-compilation (reuse existing binary)
@@ -13,28 +15,39 @@ set -e
 
 GREEN='\033[0;32m' BLUE='\033[0;34m' YELLOW='\033[1;33m' RED='\033[0;31m' NC='\033[0m'
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/arena_profile.sh"
+
 ROBOT_USER="${ROBOT_USER:-booster}"
 ROBOT_IP="${ROBOT_IP:-192.168.10.102}"
 ROBOT_PATH="${ROBOT_PATH:-~/spqr/arena}"
 ROBOT_PASSWORD="${ROBOT_PASSWORD:-123456}"
 SKIP_BUILD=false
 SKIP_RESTART=true
+ROBOT_NAME=""
+WIRELESS=""
 
 while [[ $# -gt 0 ]]; do
     case $1 in
-        -i|--ip)        ROBOT_IP="$2";   shift 2 ;;
-        -u|--user)      ROBOT_USER="$2"; shift 2 ;;
-        --path)         ROBOT_PATH="$2"; shift 2 ;;
+        -r|--robot)     ROBOT_NAME="$2";  shift 2 ;;
+        --wireless)     WIRELESS="wireless"; shift ;;
+        -i|--ip)        ROBOT_IP="$2";    shift 2 ;;
+        -u|--user)      ROBOT_USER="$2";  shift 2 ;;
+        --path)         ROBOT_PATH="$2";  shift 2 ;;
         --skip-build)   SKIP_BUILD=true;  shift ;;
         --skip-restart) SKIP_RESTART=true; shift ;;
         --restart)      SKIP_RESTART=false; shift ;;
-        -h|--help)      head -n 11 "$0" | tail -n +2 | sed 's/^# \?//'; exit 0 ;;
+        -h|--help)      head -n 12 "$0" | tail -n +2 | sed 's/^# \?//'; exit 0 ;;
         *) echo -e "${RED}Unknown option: $1${NC}"; exit 1 ;;
     esac
 done
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [ -n "$ROBOT_NAME" ]; then
+    arena_resolve "$ROBOT_NAME" "$WIRELESS" || exit 1
+fi
+
 ROOT="$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel)"
+arena_ensure_subnet "$ROBOT_IP"
 SSH_KEY="$HOME/.ssh/id_ed25519"
 SSH_OPTS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR -i $SSH_KEY"
 ROBOT="${ROBOT_USER}@${ROBOT_IP}"
@@ -74,7 +87,7 @@ rsync -aqz -e "ssh $SSH_OPTS" --delete \
 
 echo -e "  ${BLUE}models...${NC}"
 rsync -aqz -e "ssh $SSH_OPTS" \
-    "$ROOT/external/colosseum/models/" "$ROBOT:${ROBOT_PATH}/models/"
+    "$ROOT/models/" "$ROBOT:${ROBOT_PATH}/models/"
 
 echo -e "  ${BLUE}sounds...${NC}"
 rsync -aqz -e "ssh $SSH_OPTS" \

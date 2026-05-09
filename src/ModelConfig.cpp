@@ -44,8 +44,7 @@ std::string read_file(const fs::path& path) {
 
 // ── PolicyModelConfig parser ──────────────────────────────────────────────────
 //
-// Expected format:
-//   default: v5
+// Expected format (default field is optional — central models.yaml is the source of truth):
 //   versions:
 //     v5:
 //       path: v5/t1-velocity_ppo_v5.onnx
@@ -86,8 +85,6 @@ PolicyModelConfig ModelConfig::parse_policy(const fs::path& yaml_path) {
         }
     }
 
-    if (cfg.default_version.empty())
-        throw std::runtime_error(yaml_path.string() + ": missing 'default' field");
     if (cfg.versions.empty())
         throw std::runtime_error(yaml_path.string() + ": no versions defined");
 

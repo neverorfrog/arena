@@ -35,8 +35,8 @@ namespace {
 
 // ── YAML-based resolution ──────────────────────────────────────────────────
 
-// Resolve via per-policy models.yaml (version → path mapping).
-// Returns empty path if models.yaml doesn't exist.
+// Resolve a specific version via per-policy models.yaml.
+// Returns empty path if models.yaml doesn't exist or version_name is empty.
 fs::path try_yaml_resolve(const std::string& task_name,
                           const std::string& version_name,
                           const fs::path& models_dir) {
@@ -46,20 +46,14 @@ fs::path try_yaml_resolve(const std::string& task_name,
     try {
         auto cfg = ModelConfig::parse_policy(yaml_path);
 
-        // Use the named version if given, otherwise the default.
-        const std::string& ver = version_name.empty()
-            ? cfg.default_version
-            : version_name;
+        // Version must be specified — central models.yaml is the source of truth.
+        if (version_name.empty()) return {};
 
-        auto it = cfg.versions.find(ver);
+        auto it = cfg.versions.find(version_name);
         if (it == cfg.versions.end()) {
-            // If explicitly requested but not found, error.
-            if (!version_name.empty())
-                throw std::runtime_error(
-                    "ModelRegistry: version '" + version_name + "' not found in " +
-                    yaml_path.string());
-            // Default version missing? Fall through to directory scan.
-            return {};
+            throw std::runtime_error(
+                "ModelRegistry: version '" + version_name + "' not found in " +
+                yaml_path.string());
         }
 
         fs::path model_path = models_dir / task_name / it->second.path;
@@ -147,7 +141,8 @@ fs::path resolve_dir(const std::string& task_name,
 // ── Public resolve overloads ─────────────────────────────────────────────────
 
 fs::path ModelRegistry::resolve(const std::string& task_name) {
-    return resolve(task_name, default_models_dir());
+    // Always go through central models.yaml for the default version.
+    return resolve(task_name, std::string{});
 }
 
 fs::path ModelRegistry::resolve(const std::string& task_name,
@@ -170,9 +165,10 @@ fs::path ModelRegistry::resolve(const std::string& task_name,
 
 fs::path ModelRegistry::resolve(const std::string& task_name,
                                 const fs::path& models_dir) {
-    // Try YAML-based resolution first (no MODELS_CONFIG override for this overload).
-    fs::path yaml_result = try_yaml_resolve(task_name, "", models_dir);
+    // Always go through central models.yaml for the default version.
+    std::string default_ver = read_default_version(task_name, models_dir);
+    fs::path yaml_result = try_yaml_resolve(task_name, default_ver, models_dir);
     if (!yaml_result.empty()) return yaml_result;
 
-    return resolve_dir(task_name, "", models_dir);
+    return resolve_dir(task_name, default_ver, models_dir);
 }
