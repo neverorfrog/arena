@@ -4,18 +4,21 @@
 #include <random>
 
 struct GaitPhaseCommandConfig {
-    float gait_freq_lo         = 1.5f;   // Hz
-    float gait_freq_hi         = 2.5f;   // Hz
-    float gate_speed_threshold = 0.05f;  // m/s, gates on ||[vx, vy]||
+    float gait_freq_lo         = 1.0f;   // Hz (matches colosseum cat_cfg.py)
+    float gait_freq_hi         = 1.3f;   // Hz
+    float speed_max            = 1.5f;   // m/s for freq scaling
+    float gate_speed_threshold = 0.01f;  // m/s, gates on horizontal speed norm
 };
 
-// Two-foot gait phase clock. Mirrors GaitPhaseCommand / GaitPhaseCommandCfg
-// from colosseum/tasks/dribbling/mdp/gait_phase_command.py.
+// Two-foot gait phase clock. Mirrors colosseum GaitPhaseCommand.
 //
 // Phase convention: left starts at φ=0, right at φ=π (half-period offset).
-// Phase is wrapped to [-π, π]. Advance is gated on horizontal speed > threshold.
+// Phase wraps to [-π, π].
+// Frequency is adaptive: freq = lo + (hi - lo) * clamp(|v_xy|/speed_max, 0, 1).
+// When stopped (|v_xy| < threshold), phase is snapped to π (stance = 1),
+// producing the observation [-1, -1, 0, 0].
 struct GaitPhaseCommand {
-    float freq_lo, freq_hi, gate_speed_threshold;
+    float freq_lo, freq_hi, speed_max, gate_speed_threshold;
     float phase_left  = 0.0f;
     float phase_right = static_cast<float>(M_PI);
     float freq        = 1.0f;
@@ -23,6 +26,7 @@ struct GaitPhaseCommand {
     explicit GaitPhaseCommand(GaitPhaseCommandConfig cfg = {})
         : freq_lo(cfg.gait_freq_lo)
         , freq_hi(cfg.gait_freq_hi)
+        , speed_max(cfg.speed_max)
         , gate_speed_threshold(cfg.gate_speed_threshold) {}
 
     // Reset phases and sample a new frequency — call on episode reset.
@@ -33,12 +37,25 @@ struct GaitPhaseCommand {
         phase_right = static_cast<float>(M_PI);
     }
 
-    // Advance clock by dt seconds, gated on horizontal speed (vx+vy norm).
+    // Advance clock by dt seconds, gated on horizontal speed.
+    // Frequency is adaptive: freq = lo + (hi-lo) * clamp(|v_xy|/speed_max, 0, 1).
+    // When stopped, snap to standing phase (π for both feet → [-1,-1,0,0]).
     void advance(float dt, float horizontal_speed) {
-        if (horizontal_speed <= gate_speed_threshold) return;
         constexpr float PI     = static_cast<float>(M_PI);
         constexpr float TWO_PI = 2.0f * PI;
-        float dphi = TWO_PI * dt * freq;
+
+        if (horizontal_speed <= gate_speed_threshold) {
+            // Standing: snap both feet to π
+            phase_left  = PI;
+            phase_right = PI;
+            return;
+        }
+
+        float t = horizontal_speed / speed_max;
+        if (t > 1.0f) t = 1.0f;
+        float adaptive_freq = freq_lo + (freq_hi - freq_lo) * t;
+        float dphi = TWO_PI * dt * adaptive_freq;
+
         phase_left  = std::fmod(phase_left  + dphi + PI, TWO_PI) - PI;
         phase_right = std::fmod(phase_right + dphi + PI, TWO_PI) - PI;
     }

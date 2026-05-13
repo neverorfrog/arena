@@ -42,9 +42,9 @@ struct VelocityObservationSpec : ObservationSpec {
 //
 // Joint ordering follows robot.joint_names (hardware/DDS/MuJoCo XML depth-first order).
 // robot.sim_joint_names is identical — the ONNX model uses this same layout.
-class T1Velocity : public Policy {
+class T1VelocitySymmetric : public Policy {
     public:
-        T1Velocity(const std::string& model_name = "",
+        T1VelocitySymmetric(const std::string& model_name = "",
                    const std::string& inference_backend = "onnx")
             : Policy(make_config(model_name, inference_backend)) {
             input_source_ = create_input_source();
@@ -179,7 +179,7 @@ class T1Velocity : public Policy {
                                       const std::string& inference_backend = "onnx") {
             TaskConfig cfg;
             cfg.inference_backend = inference_backend;
-            cfg.task_name    = "t1-velocity";
+            cfg.task_name    = "t1-velocity-symmetric";
             cfg.model_name   = model_name;
             cfg.model_path   = model_name.empty()
                 ? ModelRegistry::resolve(cfg.task_name).string()
@@ -187,7 +187,7 @@ class T1Velocity : public Policy {
             cfg.policy_dt    = 0.02f;
             cfg.action_scale.fill(0.25f);
             // Arm joints in hardware order (indices 2-9): reduced to 0.01
-            // for (int i = 2; i <= 9; i++) cfg.action_scale[i] = 0.01f;
+            for (int i = 2; i <= 9; i++) cfg.action_scale[i] = 0.01f;
 
             // ── Scene (MujocoPortal) ──────────────────────────────────────────
             // PROJECT_ROOT is injected by CMake as the repository root.
@@ -297,4 +297,4 @@ class T1Velocity : public Policy {
         }
 };
 
-REGISTER_TASK("t1-velocity", T1Velocity);
+REGISTER_TASK("t1-velocity-symmetric", T1VelocitySymmetric);
