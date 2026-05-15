@@ -93,10 +93,19 @@ echo -e "  ${BLUE}sounds...${NC}"
 rsync -aqz -e "ssh $SSH_OPTS" \
     "$ROOT/sounds/" "$ROBOT:${ROBOT_PATH}/sounds/"
 
-for f in run.sh arena.service arena_start.service arena_stop.service; do
+for f in run.sh arena.service arena_start.service arena_stop.service dds_debug.service; do
     scp -q $SSH_OPTS "$SCRIPT_DIR/$f" "$ROBOT:${ROBOT_PATH}/$f"
 done
 ssh $SSH_OPTS "$ROBOT" "chmod +x ${ROBOT_PATH}/run.sh"
+
+# Always install/refresh the service unit files so they stay in sync.
+echo -e "  ${BLUE}systemd units...${NC}"
+ssh $SSH_OPTS "$ROBOT" "\
+    $RSUDO cp ${ROBOT_PATH}/arena.service       /etc/systemd/system/arena.service && \
+    $RSUDO cp ${ROBOT_PATH}/arena_start.service  /etc/systemd/system/arena_start.service && \
+    $RSUDO cp ${ROBOT_PATH}/arena_stop.service   /etc/systemd/system/arena_stop.service && \
+    $RSUDO cp ${ROBOT_PATH}/dds_debug.service    /etc/systemd/system/dds-debug.service && \
+    $RSUDO systemctl daemon-reload"
 
 echo -e "  ${GREEN}✓${NC} Files transferred"
 echo

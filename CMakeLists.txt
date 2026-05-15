@@ -128,6 +128,7 @@ list(FILTER SOURCES EXCLUDE REGEX ".*/main\\.cpp$")
 list(FILTER SOURCES EXCLUDE REGEX ".*/benchmark\\.cpp$")
 list(FILTER SOURCES EXCLUDE REGEX ".*/arena_start\\.cpp$")
 list(FILTER SOURCES EXCLUDE REGEX ".*/arena_stop\\.cpp$")
+list(FILTER SOURCES EXCLUDE REGEX ".*/dds_debug\\.cpp$")
 list(FILTER SOURCES EXCLUDE REGEX ".*/tests/.*")
 
 if(NOT MUJOCO)
@@ -300,4 +301,15 @@ target_include_directories(
 )
 target_link_libraries(arena_stop PRIVATE booster::booster_robotics_sdk Threads::Threads)
 install(TARGETS arena_stop RUNTIME DESTINATION bin)
+
+# dds_debug — DDS diagnostic tool (uses RobotPortal + create_input_source like main)
+add_executable(dds_debug ${CMAKE_CURRENT_SOURCE_DIR}/src/dds_debug.cpp)
+target_include_directories(
+    dds_debug
+    PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
+        ${CMAKE_CURRENT_SOURCE_DIR}
+)
+target_link_libraries(dds_debug PRIVATE arena)
+install(TARGETS dds_debug RUNTIME DESTINATION bin)
 # ====================================================

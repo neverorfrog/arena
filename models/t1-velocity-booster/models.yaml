@@ -1,4 +1,0 @@
-default: v1
-versions:
-  v1:
-    path: v1/t1-velocity-booster_ppo_v1.onnx

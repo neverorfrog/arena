@@ -279,7 +279,7 @@ class T1Velocity : public Policy {
             // ── Safe startup sequence ─────────────────────────────────────
             // Prepare gains: stiff enough to hold pose, damped enough to
             // prevent oscillation. Ankle kd raised from 0.5 to 2.0.
-            cfg.robot.prepare_state.duration_s    = 0.3f;
+            cfg.robot.prepare_state.duration_s    = 0.5f;
             cfg.robot.prepare_state.stiffness     = {
                 5.0f,   5.0f,
                 40.0f,  50.0f,  20.0f, 10.0f,

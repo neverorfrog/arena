@@ -5,9 +5,9 @@
 
 struct GaitPhaseCommandConfig {
     float gait_freq_lo         = 1.0f;   // Hz (matches colosseum cat_cfg.py)
-    float gait_freq_hi         = 1.3f;   // Hz
-    float speed_max            = 1.5f;   // m/s for freq scaling
-    float gate_speed_threshold = 0.01f;  // m/s, gates on horizontal speed norm
+    float gait_freq_hi         = 1.5f;   // Hz
+    float speed_max            = 1.0f;   // m/s for freq scaling
+    float gate_speed_threshold = 0.05f;  // m/s, gates on horizontal speed norm
 };
 
 // Two-foot gait phase clock. Mirrors colosseum GaitPhaseCommand.
@@ -19,7 +19,7 @@ struct GaitPhaseCommandConfig {
 // producing the observation [-1, -1, 0, 0].
 struct GaitPhaseCommand {
     float freq_lo, freq_hi, speed_max, gate_speed_threshold;
-    float phase_left  = static_cast<float>(M_PI);
+    float phase_left  = 0.0f;
     float phase_right = static_cast<float>(M_PI);
     float freq        = 1.0f;
 

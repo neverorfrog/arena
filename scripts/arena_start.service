@@ -5,8 +5,6 @@ ConditionPathExists=/home/booster/spqr/arena/build/aarch64/arena_start
 
 [Service]
 Type=simple
-User=booster
-Group=booster
 WorkingDirectory=/home/booster/spqr/arena
 Environment=FASTRTPS_DEFAULT_PROFILES_FILE=/opt/booster/BoosterRos2/fastdds_profile.xml
 Environment=ROS_DISTRO=humble
