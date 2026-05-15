@@ -91,6 +91,8 @@ void MujocoPortal::initialize() {
         throw std::runtime_error("MujocoPortal: mj_loadXML failed: " + std::string(err));
 
     mj_model_->opt.timestep = static_cast<double>(cfg_.physics_dt);
+    mj_model_->opt.iterations = 10;
+    mj_model_->opt.ls_iterations = 20;
     mj_data_ = mj_makeData(mj_model_);
     mj_resetData(mj_model_, mj_data_);
 
@@ -111,8 +113,7 @@ void MujocoPortal::initialize() {
     // Matches Python MujocoController._add_actuators() which sets armature=0.3
     // for all joints. Must be done before mj_forward so the model is consistent.
     for (int i = 0; i < TaskConfig::NUM_JOINTS; i++) {
-        mj_model_->dof_armature[joint_dof_idx_[i]] =
-            static_cast<mjtNum>(task_cfg_.robot.joint_armature[i]);
+        mj_model_->dof_armature[joint_dof_idx_[i]] = static_cast<mjtNum>(task_cfg_.robot.joint_armature[i]);
     }
 
     // 5. Resolve sensor offsets.
@@ -169,6 +170,19 @@ void MujocoPortal::updateState() {
         }
         auto pg = projectedGravity(q);
         for (int k = 0; k < 3; k++) state_.projected_gravity[k] = pg[k];
+
+        // Compute body-frame linear velocity: v_body = q* * v_world
+        float w = q[0], x = q[1], y = q[2], z = q[3];
+        float vx = mj_data_->qvel[0], vy = mj_data_->qvel[1], vz = mj_data_->qvel[2];
+        // quat_rotate_inverse: v' = v*(2w²-1) - 2w*cross(qv,v) + 2*qv*dot(qv,v)
+        float w2 = w * w;
+        float dot_qv_v = x*vx + y*vy + z*vz;
+        float cx = y*vz - z*vy;
+        float cy = z*vx - x*vz;
+        float cz = x*vy - y*vx;
+        state_.base_lin_vel[0] = vx * (2*w2 - 1) - 2*w*cx + 2*x*dot_qv_v;
+        state_.base_lin_vel[1] = vy * (2*w2 - 1) - 2*w*cy + 2*y*dot_qv_v;
+        state_.base_lin_vel[2] = vz * (2*w2 - 1) - 2*w*cz + 2*z*dot_qv_v;
     }
 }
 

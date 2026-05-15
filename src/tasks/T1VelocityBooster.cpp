@@ -42,9 +42,9 @@ struct VelocityObservationSpec : ObservationSpec {
 //
 // Joint ordering follows robot.joint_names (hardware/DDS/MuJoCo XML depth-first order).
 // robot.sim_joint_names is identical — the ONNX model uses this same layout.
-class T1VelocitySymmetric : public Policy {
+class T1VelocityBooster : public Policy {
     public:
-        T1VelocitySymmetric(const std::string& model_name = "",
+        T1VelocityBooster(const std::string& model_name = "",
                    const std::string& inference_backend = "onnx")
             : Policy(make_config(model_name, inference_backend)) {
             input_source_ = create_input_source();
@@ -191,7 +191,7 @@ class T1VelocitySymmetric : public Policy {
                                       const std::string& inference_backend = "onnx") {
             TaskConfig cfg;
             cfg.inference_backend = inference_backend;
-            cfg.task_name    = "t1-velocity-symmetric";
+            cfg.task_name    = "t1-velocity-booster";
             cfg.model_name   = model_name;
             cfg.model_path   = model_name.empty()
                 ? ModelRegistry::resolve(cfg.task_name).string()
@@ -309,4 +309,4 @@ class T1VelocitySymmetric : public Policy {
         }
 };
 
-REGISTER_TASK("t1-velocity-symmetric", T1VelocitySymmetric);
+REGISTER_TASK("t1-velocity-booster", T1VelocityBooster);

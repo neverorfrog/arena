@@ -137,14 +137,26 @@ class T1Velocity : public Policy {
                 observation.push_back(last_action[i]);
             }
 
-            // 6. Velocity command (3)
+            // 6. Velocity command (3) — rate-limited toward target
+            vel_command_.step_filter(config_.policy_dt);
             observation.push_back(vel_command_.vx);
             observation.push_back(vel_command_.vy);
             observation.push_back(vel_command_.vyaw);
 
             static int obs_diag = 0;
             if (obs_diag % 50 == 0) {
-                std::cout << "\n[OBS] step=" << obs_diag
+                std::cout << "\n[vel] step=" << obs_diag
+                          << " | cmd: vx=" << std::showpos << vel_command_.vx
+                          << " vy=" << vel_command_.vy
+                          << " wz=" << vel_command_.vyaw
+                          << " | act: vx=" << state.base_lin_vel[0]
+                          << " vy=" << state.base_lin_vel[1]
+                          << " wz=" << state.gyro[2]
+                          << " | err: vx=" << (vel_command_.vx - state.base_lin_vel[0])
+                          << " vy=" << (vel_command_.vy - state.base_lin_vel[1])
+                          << " wz=" << (vel_command_.vyaw - state.gyro[2])
+                          << std::noshowpos << "\n";
+                std::cout << "[OBS] step=" << obs_diag
                           << " cmd=[" << vel_command_.vx << "," << vel_command_.vy << "," << vel_command_.vyaw << "]"
                           << " gyro=[" << state.gyro[0] << "," << state.gyro[1] << "," << state.gyro[2] << "]"
                           << " pg=[" << state.projected_gravity[0] << "," << state.projected_gravity[1] << "," << state.projected_gravity[2] << "]\n";
@@ -187,7 +199,7 @@ class T1Velocity : public Policy {
             cfg.policy_dt    = 0.02f;
             cfg.action_scale.fill(0.25f);
             // Arm joints in hardware order (indices 2-9): reduced to 0.01
-            // for (int i = 2; i <= 9; i++) cfg.action_scale[i] = 0.01f;
+            for (int i = 2; i <= 9; i++) cfg.action_scale[i] = 0.01f;
 
             // ── Scene (MujocoPortal) ──────────────────────────────────────────
             // PROJECT_ROOT is injected by CMake as the repository root.
@@ -243,11 +255,11 @@ class T1Velocity : public Policy {
 
             cfg.robot.effort_limit = {
                 7.0f,  7.0f,                                        // Head (neck)
-                30.0f, 30.0f, 30.0f, 30.0f,                        // Left arm
-                30.0f, 30.0f, 30.0f, 30.0f,                        // Right arm
-                40.0f,                                              // Waist
-                90.0f, 40.0f, 40.0f, 118.0f, 57.0f, 57.0f,        // Left leg
-                90.0f, 40.0f, 40.0f, 118.0f, 57.0f, 57.0f,        // Right leg
+                36.0f, 36.0f, 36.0f, 36.0f,                        // Left arm
+                36.0f, 36.0f, 36.0f, 36.0f,                        // Right arm
+                60.0f,                                              // Waist
+                90.0f, 60.0f, 60.0f, 130.0f, 36.0f, 50.0f,        // Left leg
+                90.0f, 60.0f, 60.0f, 130.0f, 36.0f, 50.0f,        // Right leg
             };
 
             // Reflected inertia per joint (rotor_inertia * 1e-6 * gear_ratio²).

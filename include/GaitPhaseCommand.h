@@ -19,7 +19,7 @@ struct GaitPhaseCommandConfig {
 // producing the observation [-1, -1, 0, 0].
 struct GaitPhaseCommand {
     float freq_lo, freq_hi, speed_max, gate_speed_threshold;
-    float phase_left  = 0.0f;
+    float phase_left  = static_cast<float>(M_PI);
     float phase_right = static_cast<float>(M_PI);
     float freq        = 1.0f;
 

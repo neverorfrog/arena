@@ -5,3 +5,11 @@ versions:
     path: v3/t1-velocity_ppo_v3.onnx
   v1:
     path: v1/t1-velocity_ppo_v1.onnx
+  v6:
+    path: v6/t1-velocity_ppo_v6.onnx
+  v7:
+    path: v7/t1-velocity_ppo_v7.onnx
+  v8:
+    path: v8/t1-velocity_ppo_v8.onnx
+  v9:
+    path: v9/t1-velocity_ppo_v9.onnx

@@ -17,4 +17,7 @@ struct RobotState {
     // Derived from IMU
     float projected_gravity[3]; // gravity vector in body frame
     float root_quat[4];         // orientation quaternion (w,x,y,z)
+
+    // Derived — base linear velocity in body frame
+    float base_lin_vel[3] = {0, 0, 0};
 };

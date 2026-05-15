@@ -17,9 +17,9 @@ struct GLFWwindow;
 // physics_dt should satisfy: decimation * physics_dt == policy_dt (0.02 s).
 // Default values match the Python MujocoConfig and training decimation.
 struct MujocoConfig {
-    float init_height = 0.70f;   // base spawn height (m)
-    int   decimation  = 10;       // physics steps per policy step
-    float physics_dt  = 0.002f;  // seconds per physics step (500 Hz)
+    float init_height = 0.665f;   // base spawn height (m)
+    int   decimation  = 4;       // physics steps per policy step
+    float physics_dt  = 0.005f;  // seconds per physics step (500 Hz)
 };
 
 // IPortal implementation for sim-to-sim testing using MuJoCo + GLFW.
