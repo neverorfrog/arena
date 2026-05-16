@@ -255,23 +255,34 @@ class T1VelocitySymmetric : public Policy {
 
             cfg.robot.effort_limit = {
                 7.0f,  7.0f,                                        // Head (neck)
-                36.0f, 36.0f, 36.0f, 36.0f,                        // Left arm
-                36.0f, 36.0f, 36.0f, 36.0f,                        // Right arm
-                60.0f,                                              // Waist
-                90.0f, 60.0f, 60.0f, 130.0f, 36.0f, 50.0f,        // Left leg
-                90.0f, 60.0f, 60.0f, 130.0f, 36.0f, 50.0f,        // Right leg
+                30.0f, 30.0f, 30.0f, 30.0f,                        // Left arm
+                30.0f, 30.0f, 30.0f, 30.0f,                        // Right arm
+                40.0f,                                              // Waist
+                90.0f, 40.0f, 40.0f, 118.0f, 57.0f, 57.0f,        // Left leg
+                90.0f, 40.0f, 40.0f, 118.0f, 57.0f, 57.0f,        // Right leg
             };
+
+            // cfg.robot.effort_limit = {
+            //     7.0f,  7.0f,                                        // Head (neck)
+            //     36.0f, 36.0f, 36.0f, 36.0f,                        // Left arm
+            //     36.0f, 36.0f, 36.0f, 36.0f,                        // Right arm
+            //     60.0f,                                              // Waist
+            //     90.0f, 60.0f, 60.0f, 130.0f, 36.0f, 50.0f,        // Left leg
+            //     90.0f, 60.0f, 60.0f, 130.0f, 36.0f, 50.0f,        // Right leg
+            // };
 
             // Reflected inertia per joint (rotor_inertia * 1e-6 * gear_ratio²).
             // Matches Python MotorSpec.reflected_inertia in actuators.py.
-            cfg.robot.joint_armature = {
-                0.0018f, 0.0018f,                                     // Neck
-                0.0283f, 0.0283f, 0.0283f, 0.0283f,                  // Left arm
-                0.0283f, 0.0283f, 0.0283f, 0.0283f,                  // Right arm
-                0.0478f,                                              // Waist
-                0.0524f, 0.0478f, 0.0478f, 0.0636f, 0.0340f, 0.0340f, // Left leg
-                0.0524f, 0.0478f, 0.0478f, 0.0636f, 0.0340f, 0.0340f, // Right leg
-            };
+            // cfg.robot.joint_armature = {
+            //     0.0018f, 0.0018f,                                     // Neck
+            //     0.0283f, 0.0283f, 0.0283f, 0.0283f,                  // Left arm
+            //     0.0283f, 0.0283f, 0.0283f, 0.0283f,                  // Right arm
+            //     0.0478f,                                              // Waist
+            //     0.0524f, 0.0478f, 0.0478f, 0.0636f, 0.0340f, 0.0340f, // Left leg
+            //     0.0524f, 0.0478f, 0.0478f, 0.0636f, 0.0340f, 0.0340f, // Right leg
+            // };
+
+            cfg.robot.joint_armature.fill(0.3f);
 
             // Mechanically coupled ankle pairs (crank mechanism).
             cfg.robot.parallel_joint_indices = {15, 16, 21, 22};
@@ -279,7 +290,7 @@ class T1VelocitySymmetric : public Policy {
             // ── Safe startup sequence ─────────────────────────────────────
             // Prepare gains: stiff enough to hold pose, damped enough to
             // prevent oscillation. Ankle kd raised from 0.5 to 2.0.
-            cfg.robot.prepare_state.duration_s    = 0.3f;
+            cfg.robot.prepare_state.duration_s    = 0.5f;
             cfg.robot.prepare_state.stiffness     = {
                 5.0f,   5.0f,
                 40.0f,  50.0f,  20.0f, 10.0f,

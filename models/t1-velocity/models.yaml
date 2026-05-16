@@ -1,0 +1,12 @@
+default: v0
+versions:
+  v0:
+    path: v0/t1-velocity_ppo_v0.onnx
+  v1:
+    path: v1/t1-velocity_ppo_v1.onnx
+  v2:
+    path: v2/t1-velocity_ppo_v2.onnx
+  v3:
+    path: v3/t1-velocity_ppo_v3.onnx
+  v4:
+    path: v4/t1-velocity_ppo_v4.onnx
