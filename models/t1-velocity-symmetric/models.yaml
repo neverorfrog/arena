@@ -14,3 +14,5 @@ versions:
     path: v4/t1-velocity-symmetric_ppo_v4.onnx
   v6:
     path: v6/t1-velocity-symmetric_ppo_v6.onnx
+  v7:
+    path: v7/t1-velocity-symmetric_ppo_v7.onnx
