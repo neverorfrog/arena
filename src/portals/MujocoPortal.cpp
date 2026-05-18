@@ -93,6 +93,7 @@ void MujocoPortal::initialize() {
     mj_model_->opt.timestep = static_cast<double>(cfg_.physics_dt);
     mj_model_->opt.iterations = 10;
     mj_model_->opt.ls_iterations = 20;
+
     mj_data_ = mj_makeData(mj_model_);
     mj_resetData(mj_model_, mj_data_);
 
@@ -109,11 +110,10 @@ void MujocoPortal::initialize() {
         kd_[i] = static_cast<double>(task_cfg_.robot.joint_damping[i]);
     }
 
-    // 3. Apply reflected inertia (armature) per joint.
-    // Matches Python MujocoController._add_actuators() which sets armature=0.3
-    // for all joints. Must be done before mj_forward so the model is consistent.
+    // 3. Apply per-joint physics overrides before mj_forward.
     for (int i = 0; i < TaskConfig::NUM_JOINTS; i++) {
-        mj_model_->dof_armature[joint_dof_idx_[i]] = static_cast<mjtNum>(task_cfg_.robot.joint_armature[i]);
+        mj_model_->dof_armature[joint_dof_idx_[i]]    = static_cast<mjtNum>(task_cfg_.robot.joint_armature[i]);
+        mj_model_->dof_frictionloss[joint_dof_idx_[i]] = static_cast<mjtNum>(task_cfg_.robot.joint_frictionloss[i]);
     }
 
     // 5. Resolve sensor offsets.

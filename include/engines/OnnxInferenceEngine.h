@@ -6,29 +6,31 @@
 #include <Eigen/Dense>
 #include <onnxruntime/core/session/onnxruntime_cxx_api.h>
 
-// Thin wrapper around an ONNX Runtime inference session.
+// ONNX Runtime inference engine.
 //
-// Loads a single-input / single-output ONNX model at construction time and
-// caches the I/O names and tensor dimensions so each forward pass only
-// allocates the minimum required memory.
+// Supports both stateless models (obs → actions) and stateful RMA models
+// (obs + state_in... → actions + state_out...).
 //
-// Expected model shape:
-//   input  — float32[1, obs_dim]   (flattened observation vector)
-//   output — float32[1, act_dim]   (raw policy actions, before scaling)
+// For stateful models, state buffers are allocated at construction (zeroed)
+// and automatically updated each infer() call from the corresponding outputs.
+// The caller does not need to know how many state tensors exist.
 //
-// The model is run on CPU. Input/output names are read from the model
-// metadata and kept alive as std::string members (ORT requires const char*
-// that outlive the Run() call).
+// I/O layout convention (must match the Python export):
+//   inputs:  obs, [state_0, state_1, ...]
+//   outputs: actions, [state_0_out, state_1_out, ...]
 class OnnxInferenceEngine : public IInferenceEngine {
 public:
     explicit OnnxInferenceEngine(const std::string& model_path);
 
-    // Forward pass. obs must have exactly obs_dim() elements.
-    // Returns action_dim() joint position targets in simulation order.
-    Eigen::VectorXf infer(const Eigen::VectorXf& input);
+    // Forward pass. obs must have exactly input_dim() elements.
+    // Returns output_dim() action values.
+    Eigen::VectorXf infer(const Eigen::VectorXf& input) override;
 
-    int input_dim()    const { return input_dim_; }
-    int output_dim() const { return output_dim_; }
+    // Zero all state buffers (call on episode reset for stateful models).
+    void reset_state();
+
+    int input_dim()  const override { return input_dim_; }
+    int output_dim() const override { return output_dim_; }
 
 private:
     Ort::Env            env_;
@@ -36,10 +38,24 @@ private:
     Ort::Session        session_;
     Ort::MemoryInfo     mem_info_;
 
-    // Cached I/O names (ORT requires const char* that outlives Run())
+    // Primary I/O (obs / actions)
     std::string input_name_;
     std::string output_name_;
-
     int input_dim_;
     int output_dim_;
+
+    // Per-state-tensor bookkeeping for stateful (RMA) models
+    struct StateBuffer {
+        std::string       input_name;
+        std::string       output_name;
+        std::vector<int64_t> shape;
+        std::vector<float>   data;   // zero-initialised, updated each step
+    };
+    std::vector<StateBuffer> state_bufs_;
+
+    // Flat name arrays for ORT Run() — must outlive Run() calls
+    std::vector<std::string>  all_input_names_;
+    std::vector<std::string>  all_output_names_;
+    std::vector<const char*>  input_name_ptrs_;
+    std::vector<const char*>  output_name_ptrs_;
 };

@@ -47,8 +47,11 @@ struct RobotConfig {
 
     // Reflected inertia added to each joint's DoF in MuJoCo.
     // MujocoPortal sets mj_model_->dof_armature from this array.
-    // Value 0.3 matches the Python MujocoController._add_actuators().
     std::array<float, N> joint_armature{};
+
+    // Coulomb friction loss per joint (N·m). MujocoPortal sets
+    // mj_model_->dof_frictionloss from this array. Default 0 = no friction.
+    std::array<float, N> joint_frictionloss{};
 
     // Standing pose (rad). Used as the reference for joint_pos_rel observations
     // and added back when decoding policy actions.

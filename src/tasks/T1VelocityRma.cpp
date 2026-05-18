@@ -42,9 +42,9 @@ struct VelocityObservationSpec : ObservationSpec {
 //
 // Joint ordering follows robot.joint_names (hardware/DDS/MuJoCo XML depth-first order).
 // robot.sim_joint_names is identical — the ONNX model uses this same layout.
-class T1VelocitySymmetric : public Policy {
+class T1VelocityRma : public Policy {
     public:
-        T1VelocitySymmetric(const std::string& model_name = "",
+        T1VelocityRma(const std::string& model_name = "",
                    const std::string& inference_backend = "onnx")
             : Policy(make_config(model_name, inference_backend)) {
             input_source_ = create_input_source();
@@ -83,26 +83,26 @@ class T1VelocitySymmetric : public Policy {
         // heading mode with heading_control_stiffness=0.5).
         void update_input() override {
             if (!input_source_) return;
-            // vel_command_.vx = -input_source_->get_axis(1) * vel_command_.vx_max;
-            // vel_command_.vy = -input_source_->get_axis(0) * vel_command_.vy_max;
-            // const float raw_yaw = -input_source_->get_axis(3);
-            // if (std::abs(raw_yaw) < 0.05f) {
-            //     if (!heading_locked_) {
-            //         heading_locked_  = true;
-            //         heading_target_ = last_yaw_;
-            //     }
-            //     const float err = wrap_to_pi(heading_target_ - last_yaw_);
-            //     vel_command_.vyaw = std::clamp(0.5f * err, -vel_command_.vyaw_max, vel_command_.vyaw_max);
-            // } else {
-            //     heading_locked_ = false;
-            //     heading_target_ = last_yaw_;
-            //     vel_command_.vyaw = raw_yaw * vel_command_.vyaw_max;
-            // }
-            vel_command_.set_normalized(
-                -input_source_->get_axis(1),
-                -input_source_->get_axis(0),
-                -input_source_->get_axis(3)
-            );
+            vel_command_.vx = -input_source_->get_axis(1) * vel_command_.vx_max;
+            vel_command_.vy = -input_source_->get_axis(0) * vel_command_.vy_max;
+            const float raw_yaw = -input_source_->get_axis(3);
+            if (std::abs(raw_yaw) < 0.05f) {
+                if (!heading_locked_) {
+                    heading_locked_  = true;
+                    heading_target_ = last_yaw_;
+                }
+                const float err = wrap_to_pi(heading_target_ - last_yaw_);
+                vel_command_.vyaw = std::clamp(0.5f * err, -vel_command_.vyaw_max, vel_command_.vyaw_max);
+            } else {
+                heading_locked_ = false;
+                heading_target_ = last_yaw_;
+                vel_command_.vyaw = raw_yaw * vel_command_.vyaw_max;
+            }
+            // vel_command_.set_normalized(
+            //     -input_source_->get_axis(1),
+            //     -input_source_->get_axis(0),
+            //     -input_source_->get_axis(3)
+            // );
         }
 
         void build_observation(const RobotState& state) override {
@@ -191,7 +191,7 @@ class T1VelocitySymmetric : public Policy {
                                       const std::string& inference_backend = "onnx") {
             TaskConfig cfg;
             cfg.inference_backend = inference_backend;
-            cfg.task_name    = "t1-velocity-symmetric";
+            cfg.task_name    = "t1-velocity-rma";
             cfg.model_name   = model_name;
             cfg.model_path   = model_name.empty()
                 ? ModelRegistry::resolve(cfg.task_name).string()
@@ -262,15 +262,6 @@ class T1VelocitySymmetric : public Policy {
                 90.0f, 40.0f, 40.0f, 118.0f, 57.0f, 57.0f,        // Right leg
             };
 
-            // cfg.robot.effort_limit = {
-            //     7.0f,  7.0f,                                        // Head (neck)
-            //     36.0f, 36.0f, 36.0f, 36.0f,                        // Left arm
-            //     36.0f, 36.0f, 36.0f, 36.0f,                        // Right arm
-            //     60.0f,                                              // Waist
-            //     90.0f, 60.0f, 60.0f, 130.0f, 36.0f, 50.0f,        // Left leg
-            //     90.0f, 60.0f, 60.0f, 130.0f, 36.0f, 50.0f,        // Right leg
-            // };
-
             // Reflected inertia per joint (rotor_inertia * 1e-6 * gear_ratio²).
             // Matches Python MotorSpec.reflected_inertia in actuators.py.
             cfg.robot.joint_armature = {
@@ -281,8 +272,6 @@ class T1VelocitySymmetric : public Policy {
                 0.0524f, 0.0478f, 0.0478f, 0.0636f, 0.0340f, 0.0340f, // Left leg
                 0.0524f, 0.0478f, 0.0478f, 0.0636f, 0.0340f, 0.0340f, // Right leg
             };
-
-            // cfg.robot.joint_armature.fill(0.3f);
 
             // Coulomb friction loss per joint — matches colosseum actuators.py.
             // Ankles use a smaller motor (lower frictionloss); everything else 0.2.
@@ -331,4 +320,4 @@ class T1VelocitySymmetric : public Policy {
         }
 };
 
-REGISTER_TASK("t1-velocity-symmetric", T1VelocitySymmetric);
+REGISTER_TASK("t1-velocity-rma", T1VelocityRma);

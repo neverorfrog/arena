@@ -1,0 +1,10 @@
+default: v0
+versions:
+  v0:
+    path: v0/t1-velocity-rma_rmappo_v0.onnx
+  v1:
+    path: v1/t1-velocity-rma_rmappo_v1.onnx
+  test:
+    path: test/t1-velocity-rma_rmappo_test.onnx
+  v2:
+    path: v2/t1-velocity-rma_rmappo_v2.onnx

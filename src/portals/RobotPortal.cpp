@@ -84,8 +84,7 @@ void RobotPortal::smoothPrepare(const PrepareStateConfig<23>& prep) {
 RobotPortal::~RobotPortal() = default;
 
 void RobotPortal::tick() {
-    next_tick_ += std::chrono::duration_cast<Clock::duration>(
-        std::chrono::duration<float>(policy_dt_));
+    next_tick_ += std::chrono::duration_cast<Clock::duration>(std::chrono::duration<float>(policy_dt_));
     std::this_thread::sleep_until(next_tick_);
 }
 
