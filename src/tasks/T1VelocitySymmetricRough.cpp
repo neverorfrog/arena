@@ -42,9 +42,9 @@ struct VelocityObservationSpec : ObservationSpec {
 //
 // Joint ordering follows robot.joint_names (hardware/DDS/MuJoCo XML depth-first order).
 // robot.sim_joint_names is identical — the ONNX model uses this same layout.
-class T1VelocityRma : public Policy {
+class T1VelocitySymmetricRough : public Policy {
     public:
-        T1VelocityRma(const std::string& model_name = "",
+        T1VelocitySymmetricRough(const std::string& model_name = "",
                    const std::string& inference_backend = "onnx")
             : Policy(make_config(model_name, inference_backend)) {
             input_source_ = create_input_source();
@@ -98,11 +98,6 @@ class T1VelocityRma : public Policy {
                 heading_target_ = last_yaw_;
                 vel_command_.vyaw = raw_yaw * vel_command_.vyaw_max;
             }
-            // vel_command_.set_normalized(
-            //     -input_source_->get_axis(1),
-            //     -input_source_->get_axis(0),
-            //     -input_source_->get_axis(3)
-            // );
         }
 
         void build_observation(const RobotState& state) override {
@@ -192,7 +187,7 @@ class T1VelocityRma : public Policy {
                                       const std::string& inference_backend = "onnx") {
             TaskConfig cfg;
             cfg.inference_backend = inference_backend;
-            cfg.task_name    = "t1-velocity-rma";
+            cfg.task_name    = "t1-velocity-symmetric-rough";
             cfg.model_name   = model_name;
             cfg.model_path   = model_name.empty()
                 ? ModelRegistry::resolve(cfg.task_name).string()
@@ -229,26 +224,26 @@ class T1VelocityRma : public Policy {
 
             cfg.robot.default_joint_pos = {
                 0.0f,  0.0f,                            // Head yaw, pitch
-                0.2f, -1.3f, 0.0f, -0.5f,              // Left arm
-                0.2f,  1.3f, 0.0f,  0.5f,              // Right arm
+                0.25f, -1.4f, 0.0f, -0.2f,              // Left arm
+                0.25f,  1.4f, 0.0f,  0.2f,              // Right arm
                 0.0f,                                 // Waist
-                -0.2f, 0.0f, 0.0f, 0.4f, -0.2f, 0.0f, // Left leg
-                -0.2f, 0.0f, 0.0f, 0.4f, -0.2f, 0.0f, // Right leg
+                -0.38f, 0.0f, 0.0f, 0.8f, -0.43f, 0.0f, // Left leg
+                -0.38f, 0.0f, 0.0f, 0.8f, -0.43f, 0.0f, // Right leg
             };
 
             cfg.robot.joint_stiffness = {
                 5.0f,   5.0f,                                       // Head
-                20.0f,  20.0f,  20.0f, 20.0f,                      // Left arm
-                20.0f,  20.0f,  20.0f, 20.0f,                      // Right arm
+                50.0f,  50.0f,  50.0f, 50.0f,                      // Left arm
+                50.0f,  50.0f,  50.0f, 50.0f,                      // Right arm
                 150.0f,                                             // Waist
                 200.0f, 200.0f, 200.0f, 200.0f, 50.0f, 50.0f,      // Left leg
                 200.0f, 200.0f, 200.0f, 200.0f, 50.0f, 50.0f,      // Right leg
             };
 
             cfg.robot.joint_damping = {
-                0.5f, 0.5f,
-                0.5f, 0.5f, 0.5f, 0.5f,
-                0.5f, 0.5f, 0.5f, 0.5f,
+                1.5f, 1.5f,
+                1.0f, 1.0f, 1.0f, 1.0f,
+                1.0f, 1.0f, 1.0f, 1.0f,
                 5.0f,
                 5.0f, 5.0f, 5.0f, 5.0f, 3.0f, 3.0f,
                 5.0f, 5.0f, 5.0f, 5.0f, 3.0f, 3.0f,
@@ -263,16 +258,7 @@ class T1VelocityRma : public Policy {
                 90.0f, 40.0f, 40.0f, 118.0f, 57.0f, 57.0f,        // Right leg
             };
 
-            // Reflected inertia per joint (rotor_inertia * 1e-6 * gear_ratio²).
-            // Matches Python MotorSpec.reflected_inertia in actuators.py.
-            cfg.robot.joint_armature = {
-                0.0018f, 0.0018f,                                     // Neck
-                0.0283f, 0.0283f, 0.0283f, 0.0283f,                  // Left arm
-                0.0283f, 0.0283f, 0.0283f, 0.0283f,                  // Right arm
-                0.0478f,                                              // Waist
-                0.0524f, 0.0478f, 0.0478f, 0.0636f, 0.0340f, 0.0340f, // Left leg
-                0.0524f, 0.0478f, 0.0478f, 0.0636f, 0.0340f, 0.0340f, // Right leg
-            };
+            cfg.robot.joint_armature.fill(0.3f);
 
             // Coulomb friction loss per joint — matches colosseum actuators.py.
             // Ankles use a smaller motor (lower frictionloss); everything else 0.2.
@@ -289,6 +275,9 @@ class T1VelocityRma : public Policy {
             cfg.robot.parallel_joint_indices = {15, 16, 21, 22};
 
             // Foot sphere geom contact setup — mirrors FEET_ONLY_COLLISION in colosseum.
+            // The base robot XML leaves spheres as non-contact (contype=0, conaffinity=0)
+            // and mesh geoms as frictionless (condim=1). MujocoPortal applies these
+            // overrides after loading the MJCF.
             cfg.robot.foot_contact.geom_names = {
                 "left_foot_sphere_1_link",  "left_foot_sphere_2_link",
                 "left_foot_sphere_3_link",  "left_foot_sphere_4_link",
@@ -305,7 +294,7 @@ class T1VelocityRma : public Policy {
             // ── Safe startup sequence ─────────────────────────────────────
             // Prepare gains: stiff enough to hold pose, damped enough to
             // prevent oscillation. Ankle kd raised from 0.5 to 2.0.
-            cfg.robot.prepare_state.duration_s    = 0.5f;
+            cfg.robot.prepare_state.duration_s    = 1.0f;
             cfg.robot.prepare_state.stiffness     = {
                 5.0f,   5.0f,
                 40.0f,  50.0f,  20.0f, 10.0f,
@@ -335,4 +324,4 @@ class T1VelocityRma : public Policy {
         }
 };
 
-REGISTER_TASK("t1-velocity-rma", T1VelocityRma);
+REGISTER_TASK("t1-velocity-symmetric-rough", T1VelocitySymmetricRough);

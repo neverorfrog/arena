@@ -116,6 +116,24 @@ void MujocoPortal::initialize() {
         mj_model_->dof_frictionloss[joint_dof_idx_[i]] = static_cast<mjtNum>(task_cfg_.robot.joint_frictionloss[i]);
     }
 
+    // 4. Apply foot geom contact configuration (mirrors colosseum FEET_ONLY_COLLISION).
+    //    The base robot XML leaves foot spheres with contype=0/conaffinity=0 (no contact)
+    //    and foot mesh geoms with condim=1 (frictionless). We replicate what colosseum's
+    //    CollisionCfg does at runtime: enable the spheres with 4D friction contact.
+    for (const auto& name : task_cfg_.robot.foot_contact.geom_names) {
+        int gid = mj_name2id(mj_model_, mjOBJ_GEOM, name.c_str());
+        if (gid < 0) {
+            std::cerr << "[MujocoPortal] Warning: foot geom not found: " << name << "\n";
+            continue;
+        }
+        mj_model_->geom_condim[gid]      = task_cfg_.robot.foot_contact.condim;
+        mj_model_->geom_contype[gid]     = task_cfg_.robot.foot_contact.contype;
+        mj_model_->geom_conaffinity[gid] = task_cfg_.robot.foot_contact.conaffinity;
+        mj_model_->geom_priority[gid]    = task_cfg_.robot.foot_contact.priority;
+        mj_model_->geom_friction[gid*3 + 0] = static_cast<mjtNum>(task_cfg_.robot.foot_contact.friction_sliding);
+        mj_model_->geom_friction[gid*3 + 1] = static_cast<mjtNum>(task_cfg_.robot.foot_contact.friction_torsional);
+    }
+
     // 5. Resolve sensor offsets.
     auto sensor_offset = [&](const char* name) -> int {
         int sid = mj_name2id(mj_model_, mjOBJ_SENSOR, name);

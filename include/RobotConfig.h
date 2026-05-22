@@ -16,6 +16,22 @@ struct PrepareStateConfig {
     float                duration_s = 5.0f;
 };
 
+// Contact configuration for a set of geoms — applied by MujocoPortal after
+// loading the MJCF. Mirrors what colosseum's CollisionCfg does at runtime.
+// Leave geom_names empty to skip (default).
+struct FootContactConfig {
+    std::vector<std::string> geom_names;
+    int   condim             = 4;     // 4D: normal + 2 tangential + torsional
+    int   contype            = 0;     // passive receiver
+    int   conaffinity        = 1;     // matches ground contype=1
+    int   priority           = 1;     // must be > ground priority (0) so condim=4 wins
+                                      // over min(4, ground_condim=3)=3; without this
+                                      // torsional friction is silently dropped and the
+                                      // stance foot yaws freely (snake-like motion)
+    float friction_sliding   = 0.6f;  // matches FEET_ONLY_COLLISION base value
+    float friction_torsional = 0.05f;
+};
+
 // Robot hardware specification. Task-agnostic: does not know about observations,
 // rewards, or policy checkpoints.
 //
@@ -66,6 +82,9 @@ struct RobotConfig {
 
     // Path to the robot MJCF/XML — loaded by MujocoPortal.
     std::string mjcf_path;
+
+    // Foot contact setup applied after MJCF load. Matches colosseum FEET_ONLY_COLLISION.
+    FootContactConfig foot_contact;
 
     // Safe startup configuration — consumed only by RobotPortal.
     PrepareStateConfig<N> prepare_state;

@@ -6,12 +6,12 @@
 // VelocityCommand. Defaults match the hardcoded constants previously scattered
 // across portal joystick loops (all 1.0 m/s or rad/s).
 struct VelocityCommandConfig {
-    float vx_max   = 1.0f;  // forward/backward (m/s)
-    float vy_max   = 0.5f;  // lateral strafe    (m/s)
+    float vx_max   = 1.5f;  // forward/backward (m/s)
+    float vy_max   = 1.0f;  // lateral strafe    (m/s)
     float vyaw_max = 1.0f;  // yaw rotation      (rad/s)
     float ramp_vx   = 3.0f;  // max accel/decel on vx   (m/s²)
     float ramp_vy   = 3.0f;  // max accel/decel on vy   (m/s²)
-    float ramp_vyaw = 3.0f;  // max accel/decel on vyaw (rad/s²)
+    float ramp_vyaw = 10.0f;  // max accel/decel on vyaw (rad/s²)
 };
 
 // Current velocity command plus its limits. Embedded in RobotState.

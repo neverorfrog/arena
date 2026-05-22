@@ -179,7 +179,8 @@ class T1VelocityBooster : public Policy {
 
             // 7. Gait phase (4) — advance clock and push [cos(φ_L), cos(φ_R), sin(φ_L), sin(φ_R)]
             float horiz_speed = std::hypot(vel_command_.vx, vel_command_.vy);
-            gait_phase_.advance(config_.policy_dt, horiz_speed);
+            // Match training gate: advance if xy-speed OR |wz| exceeds threshold
+            gait_phase_.advance(config_.policy_dt, std::max(horiz_speed, std::abs(vel_command_.vyaw)));
             for (float v : gait_phase_.command()) observation.push_back(v);
 
 #ifndef NDEBUG
@@ -275,6 +276,20 @@ class T1VelocityBooster : public Policy {
 
             // Mechanically coupled ankle pairs (crank mechanism).
             cfg.robot.parallel_joint_indices = {15, 16, 21, 22};
+
+            // Foot sphere geom contact setup — mirrors FEET_ONLY_COLLISION in colosseum.
+            cfg.robot.foot_contact.geom_names = {
+                "left_foot_sphere_1_link",  "left_foot_sphere_2_link",
+                "left_foot_sphere_3_link",  "left_foot_sphere_4_link",
+                "left_foot_sphere_5_link",  "left_foot_sphere_6_link",
+                "left_foot_sphere_7_link",  "left_foot_sphere_8_link",
+                "left_foot_sphere_9_link",  "left_foot_sphere_10_link",
+                "right_foot_sphere_1_link", "right_foot_sphere_2_link",
+                "right_foot_sphere_3_link", "right_foot_sphere_4_link",
+                "right_foot_sphere_5_link", "right_foot_sphere_6_link",
+                "right_foot_sphere_7_link", "right_foot_sphere_8_link",
+                "right_foot_sphere_9_link", "right_foot_sphere_10_link",
+            };
 
             // ── Safe startup sequence ─────────────────────────────────────
             // Prepare gains: stiff enough to hold pose, damped enough to
