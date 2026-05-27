@@ -92,7 +92,7 @@ class T1VelocitySymmetricRough : public Policy {
                     heading_target_ = last_yaw_;
                 }
                 const float err = wrap_to_pi(heading_target_ - last_yaw_);
-                vel_command_.vyaw = std::clamp(0.5f * err, -vel_command_.vyaw_max, vel_command_.vyaw_max);
+                vel_command_.vyaw = std::clamp(1.5f * err, -vel_command_.vyaw_max, vel_command_.vyaw_max);
             } else {
                 heading_locked_ = false;
                 heading_target_ = last_yaw_;
