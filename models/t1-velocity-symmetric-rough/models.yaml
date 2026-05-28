@@ -2,3 +2,5 @@ default: v0
 versions:
   v0:
     path: v0/t1-velocity-symmetric-rough_ppo_v0.onnx
+  v1:
+    path: v1/t1-velocity-symmetric-rough_ppo_v1.onnx

@@ -1,0 +1,4 @@
+- Fa difficolta a fermarsi a volte
+- Poco reattivo a riprendere equilibrio
+- Ruota lentamente su yaw
+- Ancoa un po di movimento a S delle gambe a velocitá alte
