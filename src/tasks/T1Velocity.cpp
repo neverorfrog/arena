@@ -224,11 +224,11 @@ class T1Velocity : public Policy {
 
             cfg.robot.default_joint_pos = {
                 0.0f,  0.0f,                            // Head yaw, pitch
-                0.25f, -1.4f, 0.0f, -0.2f,              // Left arm
-                0.25f,  1.4f, 0.0f,  0.2f,              // Right arm
+                0.05f, -1.4f, 0.0f, -0.2f,              // Left arm
+                0.05f,  1.4f, 0.0f,  0.2f,              // Right arm
                 0.0f,                                 // Waist
-                -0.38f, 0.0f, 0.0f, 0.8f, -0.43f, 0.0f, // Left leg
-                -0.38f, 0.0f, 0.0f, 0.8f, -0.43f, 0.0f, // Right leg
+                -0.32f, 0.0f, 0.0f, 0.6f, -0.28f, 0.0f, // Left leg
+                -0.32f, 0.0f, 0.0f, 0.6f, -0.28f, 0.0f, // Right leg
             };
 
             cfg.robot.joint_stiffness = {
