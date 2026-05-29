@@ -187,7 +187,7 @@ class T1Velocity : public Policy {
                                       const std::string& inference_backend = "onnx") {
             TaskConfig cfg;
             cfg.inference_backend = inference_backend;
-            cfg.task_name    = "t1-velocity-symmetric";
+            cfg.task_name    = "t1-velocity";
             cfg.model_name   = model_name;
             cfg.model_path   = model_name.empty()
                 ? ModelRegistry::resolve(cfg.task_name).string()
@@ -270,7 +270,7 @@ class T1Velocity : public Policy {
                 0.2f, 0.2f, 0.2f, 0.2f, 0.1f, 0.1f,            // Left leg
                 0.2f, 0.2f, 0.2f, 0.2f, 0.1f, 0.1f,            // Right leg
             };
-
+            
             // Mechanically coupled ankle pairs (crank mechanism).
             cfg.robot.parallel_joint_indices = {15, 16, 21, 22};
 
