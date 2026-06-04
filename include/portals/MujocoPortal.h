@@ -17,7 +17,7 @@ struct GLFWwindow;
 // physics_dt should satisfy: decimation * physics_dt == policy_dt (0.02 s).
 // Matches training: timestep=0.005s, decimation=4 (200 Hz physics).
 struct MujocoConfig {
-    float init_height = 0.65f;   // base spawn height (m)
+    float init_height = 0.66f;   // base spawn height (m) — matches colosseum
     int   decimation  = 4;        // physics steps per policy step
     float physics_dt  = 0.005f;  // seconds per physics step (200 Hz)
 };
@@ -79,6 +79,11 @@ private:
     // Sensor offsets in sensordata[]
     int gyro_offset_ = -1;
     int quat_offset_ = -1;
+
+    // Debug: when set (env ARENA_HOLD_POSE), ignore policy commands and hold
+    // default_joint_pos with the trained gains. Isolates plant instability
+    // (e.g. ankle-roll buzz) from the obs→policy→action loop.
+    bool hold_pose_ = false;
 
     // Pending joint commands (written by publishCommand, consumed by tick).
     std::array<double, TaskConfig::NUM_JOINTS> target_{};

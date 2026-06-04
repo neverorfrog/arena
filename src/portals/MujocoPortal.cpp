@@ -91,8 +91,19 @@ void MujocoPortal::initialize() {
         throw std::runtime_error("MujocoPortal: mj_loadXML failed: " + std::string(err));
 
     mj_model_->opt.timestep = static_cast<double>(cfg_.physics_dt);
-    mj_model_->opt.iterations = 10;
+    mj_model_->opt.iterations    = 10;
     mj_model_->opt.ls_iterations = 20;
+    // Match colosseum/mjlab, which trains under the implicitfast integrator so
+    // joint damping is integrated implicitly. Without this, damping applied as an
+    // explicit qfrc_applied torque is under-damped at this timestep / joint inertia
+    // and the policy settles into a standing limit cycle (ankle-roll oscillation).
+    mj_model_->opt.integrator = mjINT_IMPLICITFAST;
+
+    hold_pose_ = (std::getenv("ARENA_HOLD_POSE") != nullptr);
+    if (hold_pose_) {
+        std::cout << "[MujocoPortal] ARENA_HOLD_POSE set — holding default pose, "
+                     "policy commands ignored.\n";
+    }
 
     mj_data_ = mj_makeData(mj_model_);
     mj_resetData(mj_model_, mj_data_);
@@ -222,6 +233,15 @@ void MujocoPortal::publishCommand(const float* targets,
 // ──────────────────────────────────────────────────────────────────────────────
 
 void MujocoPortal::tick() {
+    // Debug hold: override policy commands with the default pose + trained gains.
+    if (hold_pose_) {
+        for (int i = 0; i < TaskConfig::NUM_JOINTS; i++) {
+            target_[i] = static_cast<double>(task_cfg_.robot.default_joint_pos[i]);
+            kp_[i]     = static_cast<double>(task_cfg_.robot.joint_stiffness[i]);
+            kd_[i]     = static_cast<double>(task_cfg_.robot.joint_damping[i]);
+        }
+    }
+
     // Apply explicit PD torques and step physics (decimation times).
     for (int s = 0; s < cfg_.decimation; s++) {
         // Clear external generalized forces before writing this substep.
@@ -230,6 +250,11 @@ void MujocoPortal::tick() {
             const double q = mj_data_->qpos[joint_qpos_idx_[i]];
             const double dq = mj_data_->qvel[joint_dof_idx_[i]];
             const double tau_raw = kp_[i] * (target_[i] - q) - kd_[i] * dq;
+            // Apply kd as implicit joint damping (integrated by the integrator),
+            // not as an explicit -kd*dq torque. This mirrors mjlab's position
+            // actuator and keeps the PD loop stable at the trained armature.
+            // mj_model_->dof_damping[joint_dof_idx_[i]] = kd_[i];
+            // const double tau_raw = kp_[i] * (target_[i] - q);
             const double limit = static_cast<double>(task_cfg_.robot.effort_limit[i]);
             const double tau = std::clamp(tau_raw, -limit, limit);
             mj_data_->qfrc_applied[joint_dof_idx_[i]] = tau;

@@ -70,14 +70,12 @@ public:
             static int dbg_step = 0;
             if (dbg_step % 50 == 0) {
                 std::cout << std::fixed << std::setprecision(4);
-                // obs min/max
                 float omin = 999, omax = -999;
                 for (float v : observation) { if (v < omin) omin = v; if (v > omax) omax = v; }
                 std::cout << "obs[0-2]:    [" << observation[0] << " " << observation[1]
                           << " " << observation[2] << "] (range " << omin << ".." << omax << ")\n";
-                // action_vec min/max
                 float amin = 999, amax = -999;
-                for (int i = 0; i < TaskConfig::NUM_JOINTS; i++) {
+                for (int i = 0; i < TaskConfig::NUM_ACTIONS; i++) {
                     if (action_vec[i] < amin) amin = action_vec[i];
                     if (action_vec[i] > amax) amax = action_vec[i];
                 }
@@ -86,18 +84,26 @@ public:
             dbg_step++;
         }
 
-        // Store last_action in sim order (used by build_observation next step).
-        for (int i = 0; i < TaskConfig::NUM_JOINTS; i++)
-            last_action[i] = action_vec[i];
+        // Store raw network output (21 values, head excluded).
+        for (int a = 0; a < TaskConfig::NUM_ACTIONS; a++)
+            last_action[a] = action_vec[a];
 
-        // Decode: network outputs in sim order → remap to hardware order.
-        // action[i] = net_out[sim2real[i]] * scale + default_joint_pos[i]
-        // For T1, sim2real is identity so this is a no-op permutation.
+        // Decode: 21 network outputs → 23 joint position targets.
+        // Start all joints at their default pose.
         std::array<float, TaskConfig::NUM_JOINTS> action{};
-        for (int i = 0; i < TaskConfig::NUM_JOINTS; i++) {
-            int s = robot_data_.sim2real[i];
-            action[i] = action_vec[s] * config_.action_scale[s] + config_.robot.default_joint_pos[i];
+        std::copy(config_.robot.default_joint_pos.begin(),
+                  config_.robot.default_joint_pos.end(), action.begin());
+
+        // Apply network outputs to controlled joints (head excluded).
+        for (int a = 0; a < TaskConfig::NUM_ACTIONS; a++) {
+            int j = config_.action_to_joint_idx[a];
+            action[j] = action_vec[a] * config_.action_scale[a]
+                      + config_.robot.default_joint_pos[j];
         }
+
+        // Hook for task-specific post-processing (e.g. head perturbation).
+        post_decode_action(action);
+
         return action;
     }
 
@@ -109,7 +115,7 @@ public:
 protected:
     TaskConfig config_;
     RobotData<TaskConfig::NUM_JOINTS> robot_data_{config_.robot};
-    float last_action[TaskConfig::NUM_JOINTS]{};  // in sim order
+    float last_action[TaskConfig::NUM_ACTIONS]{};  // raw network output (head excluded)
     std::vector<float> observation;
     std::unique_ptr<IInferenceEngine> engine_;
     std::unique_ptr<IInputSource> input_source_;
@@ -121,4 +127,8 @@ protected:
 
     // Subclass fills `observation` to match the training observation layout.
     virtual void build_observation(const RobotState& state) = 0;
+
+    // Called after action decoding, before returning. Override to modify
+    // joint targets (e.g. head perturbation for velocity task).
+    virtual void post_decode_action(std::array<float, TaskConfig::NUM_JOINTS>&) {}
 };
