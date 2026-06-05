@@ -6,3 +6,7 @@ versions:
     path: v1/t1-velocity-rma_rmappo_v1.onnx
   v2:
     path: v2/t1-velocity-rma_rmappo_v2.onnx
+  jun5_0:
+    path: jun5_0/t1-velocity-rma_rmappo_jun5_0.onnx
+  jun5_1:
+    path: jun5_1/t1-velocity-rma_rmappo_jun5_1.onnx

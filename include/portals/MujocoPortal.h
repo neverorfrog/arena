@@ -5,6 +5,7 @@
 #include <array>
 #include <atomic>
 #include <chrono>
+#include <deque>
 #include <utility>
 #include <string>
 #include <thread>
@@ -20,6 +21,20 @@ struct MujocoConfig {
     float init_height = 0.66f;   // base spawn height (m) — matches colosseum
     int   decimation  = 4;        // physics steps per policy step
     float physics_dt  = 0.005f;  // seconds per physics step (200 Hz)
+
+    // Sim-to-sim latency injection (policy steps). MujocoPortal otherwise has
+    // ZERO latency, unlike the real robot's FastDDS transport (~2-3 steps) and
+    // the training obs-delay DR — which is why the on-hardware ankle ring never
+    // reproduced here. obs_delay_steps delays what getState() exposes to the
+    // policy; action_delay_steps delays when published commands reach physics.
+    // Overridable at runtime via ARENA_OBS_DELAY / ARENA_ACT_DELAY.
+    int   obs_delay_steps    = 1;
+    int   action_delay_steps = 1;
+
+    // Settle at the prepare pose with prepare gains before handing to the policy,
+    // reproducing the hardware startup handoff (prepare_pose -> policy commands
+    // default_joint_pos under a gain switch). Disable via ARENA_NO_PREPARE.
+    bool  prepare = true;
 };
 
 // IPortal implementation for sim-to-sim testing using MuJoCo + GLFW.
@@ -90,6 +105,18 @@ private:
     std::array<double, TaskConfig::NUM_JOINTS> kp_{};
     std::array<double, TaskConfig::NUM_JOINTS> kd_{};
 
+    // Latency injection (see MujocoConfig). Resolved from cfg_ + env at init.
+    int  obs_delay_steps_    = 0;
+    int  action_delay_steps_ = 0;
+    bool prepare_            = true;
+    // Ring of recent raw states; getState() exposes the one obs_delay_steps_ back.
+    std::deque<RobotState> obs_ring_;
+    // Ring of recent commands; tick() applies the one action_delay_steps_ back.
+    struct DelayedCommand {
+        std::array<double, TaskConfig::NUM_JOINTS> target, kp, kd;
+    };
+    std::deque<DelayedCommand> cmd_ring_;
+
     // Tick timing
     using Clock = std::chrono::steady_clock;
     Clock::time_point next_tick_;
@@ -97,5 +124,7 @@ private:
 
     // Internal helpers
     void setupViewer();
+    void stepPhysics();   // one policy step: decimation PD substeps (no render/sleep)
+    void runPrepare();    // settle at prepare pose with prepare gains before policy
     static std::array<float, 3> projectedGravity(const double q[4]);
 };

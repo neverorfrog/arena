@@ -1,134 +1,59 @@
 #pragma once
-#include "inputs/IInputSource.h"
-#include "engines/IInferenceEngine.h"
-#include "engines/OnnxInferenceEngine.h"
-#ifdef WITH_TENSORRT
-#include "engines/TrtInferenceEngine.h"
-#endif
-#include "RobotData.h"
 #include "RobotState.h"
 #include "TaskConfig.h"
-#include <iomanip>
-#include <iostream>
+#include "skills/Skill.h"
+#include <algorithm>
+#include <array>
 #include <memory>
+#include <vector>
 
-inline std::unique_ptr<IInferenceEngine> make_engine(const TaskConfig& cfg) {
-    if (cfg.inference_backend == "trt") {
-#ifdef WITH_TENSORRT
-        std::string engine_path = cfg.model_path;
-        auto pos = engine_path.rfind(".onnx");
-        if (pos != std::string::npos)
-            engine_path.replace(pos, 5, ".engine");
-        return std::make_unique<TrtInferenceEngine>(engine_path);
-#else
-        throw std::runtime_error(
-            "TensorRT backend not available (build without TensorRT)");
-#endif
-    }
-    return std::make_unique<OnnxInferenceEngine>(cfg.model_path);
-}
-
-// Abstract base class for task-specific deployment policies.
+// Composite deployment policy: a list of Skills merged per joint each step.
 //
-// A Policy owns the inference engine, the input source, and drives the
-// inference loop. Subclasses implement build_observation() to match training,
-// and optionally override update_input() to read from input_source_ and update
-// task-specific state (e.g. a VelocityCommand in T1Velocity).
+// A Policy owns the robot/task config (gains, joint names, scene — read by main
+// for publishCommand and by skills for obs/decode) and a list of Skills. Each
+// step it runs the skills (respecting their decimation) over one persistent
+// target buffer seeded with the default pose. Skills write only the joints they
+// own; later skills win, skipped skills hold (see Skill.h).
 //
-// Execution flow per step:
-//   1. reset()           — zero last_action before the first step
-//   2. get_action(state):
-//      a. update_input()        — read input_source_, update task state
-//      b. build_observation()   — fill `observation` from state + task state
-//      c. engine_->infer()      — forward pass
-//      d. decode action         — raw * action_scale[i] + default_joint_pos[i]
+// Subclasses are thin task factories: build the TaskConfig, then add_skill() the
+// skills that make up the behavior (e.g. T1Velocity = LocomotionSkill + HeadSkill).
+//
+// Execution flow per step (main.cpp):
+//   1. reset()           — reset all skills, reseed target buffer
+//   2. get_action(state) — run due skills over the buffer, return 23 targets
 class Policy {
 public:
-    explicit Policy(TaskConfig cfg)
-        : config_(std::move(cfg)),
-          engine_(make_engine(config_)) {
-        observation.reserve(engine_->input_dim());
-    }
-
-    virtual ~Policy() {
-        if (input_source_) input_source_->stop();
-    }
-
-    // Zero last_action so the first observation does not carry stale values.
-    void reset() {
-        std::fill(std::begin(last_action), std::end(last_action), 0.0f);
-    }
-
-    // Run one inference step. Returns joint position targets in hardware order.
-    std::array<float, TaskConfig::NUM_JOINTS> get_action(const RobotState& state) {
-        update_input();
-        build_observation(state);
-        Eigen::VectorXf obs_vec = Eigen::Map<Eigen::VectorXf>(observation.data(), observation.size());
-        Eigen::VectorXf action_vec = engine_->infer(obs_vec);
-
-        if (config_.debug) {
-            static int dbg_step = 0;
-            if (dbg_step % 50 == 0) {
-                std::cout << std::fixed << std::setprecision(4);
-                float omin = 999, omax = -999;
-                for (float v : observation) { if (v < omin) omin = v; if (v > omax) omax = v; }
-                std::cout << "obs[0-2]:    [" << observation[0] << " " << observation[1]
-                          << " " << observation[2] << "] (range " << omin << ".." << omax << ")\n";
-                float amin = 999, amax = -999;
-                for (int i = 0; i < TaskConfig::NUM_ACTIONS; i++) {
-                    if (action_vec[i] < amin) amin = action_vec[i];
-                    if (action_vec[i] > amax) amax = action_vec[i];
-                }
-                std::cout << "net_out:     " << amin << " .. " << amax << "\n" << std::flush;
-            }
-            dbg_step++;
-        }
-
-        // Store raw network output (21 values, head excluded).
-        for (int a = 0; a < TaskConfig::NUM_ACTIONS; a++)
-            last_action[a] = action_vec[a];
-
-        // Decode: 21 network outputs → 23 joint position targets.
-        // Start all joints at their default pose.
-        std::array<float, TaskConfig::NUM_JOINTS> action{};
+    explicit Policy(TaskConfig cfg) : config_(std::move(cfg)) {
         std::copy(config_.robot.default_joint_pos.begin(),
-                  config_.robot.default_joint_pos.end(), action.begin());
-
-        // Apply network outputs to controlled joints (head excluded).
-        for (int a = 0; a < TaskConfig::NUM_ACTIONS; a++) {
-            int j = config_.action_to_joint_idx[a];
-            action[j] = action_vec[a] * config_.action_scale[a]
-                      + config_.robot.default_joint_pos[j];
-        }
-
-        // Hook for task-specific post-processing (e.g. head perturbation).
-        post_decode_action(action);
-
-        return action;
+                  config_.robot.default_joint_pos.end(), merged_.begin());
     }
 
-    void set_debug(bool on) { config_.debug = on; }
+    virtual ~Policy() = default;
+
+    void reset() {
+        step_count_ = 0;
+        std::copy(config_.robot.default_joint_pos.begin(),
+                  config_.robot.default_joint_pos.end(), merged_.begin());
+        for (auto& s : skills_) s->reset();
+    }
+
+    // Run one policy step. Returns joint position targets in hardware order.
+    std::array<float, TaskConfig::NUM_JOINTS> get_action(const RobotState& state) {
+        for (auto& s : skills_) {
+            if (step_count_ % s->decimation == 0)
+                s->compute(state, merged_);
+        }
+        step_count_++;
+        return merged_;
+    }
 
     const TaskConfig& config() const { return config_; }
-    IInputSource* get_input_source() const { return input_source_.get(); }
 
 protected:
+    void add_skill(std::unique_ptr<Skill> s) { skills_.push_back(std::move(s)); }
+
     TaskConfig config_;
-    RobotData<TaskConfig::NUM_JOINTS> robot_data_{config_.robot};
-    float last_action[TaskConfig::NUM_ACTIONS]{};  // raw network output (head excluded)
-    std::vector<float> observation;
-    std::unique_ptr<IInferenceEngine> engine_;
-    std::unique_ptr<IInputSource> input_source_;
-
-    // Called once per step before build_observation(). Default: no-op.
-    // Override to read from input_source_ and update task-specific state
-    // (e.g. a VelocityCommand).
-    virtual void update_input() {}
-
-    // Subclass fills `observation` to match the training observation layout.
-    virtual void build_observation(const RobotState& state) = 0;
-
-    // Called after action decoding, before returning. Override to modify
-    // joint targets (e.g. head perturbation for velocity task).
-    virtual void post_decode_action(std::array<float, TaskConfig::NUM_JOINTS>&) {}
+    std::vector<std::unique_ptr<Skill>> skills_;
+    std::array<float, TaskConfig::NUM_JOINTS> merged_{};  // persistent merged targets
+    int step_count_ = 0;
 };

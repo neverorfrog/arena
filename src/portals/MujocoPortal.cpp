@@ -105,6 +105,19 @@ void MujocoPortal::initialize() {
                      "policy commands ignored.\n";
     }
 
+    // Resolve latency / prepare from config, with env overrides for quick sweeps.
+    obs_delay_steps_    = cfg_.obs_delay_steps;
+    action_delay_steps_ = cfg_.action_delay_steps;
+    prepare_            = cfg_.prepare;
+    if (const char* e = std::getenv("ARENA_OBS_DELAY")) obs_delay_steps_ = std::atoi(e);
+    if (const char* e = std::getenv("ARENA_ACT_DELAY")) action_delay_steps_ = std::atoi(e);
+    if (std::getenv("ARENA_NO_PREPARE")) prepare_ = false;
+    obs_delay_steps_    = std::max(0, obs_delay_steps_);
+    action_delay_steps_ = std::max(0, action_delay_steps_);
+    if (obs_delay_steps_ || action_delay_steps_)
+        std::cout << "[MujocoPortal] latency: obs=" << obs_delay_steps_
+                  << " act=" << action_delay_steps_ << " policy steps\n";
+
     mj_data_ = mj_makeData(mj_model_);
     mj_resetData(mj_model_, mj_data_);
 
@@ -157,18 +170,27 @@ void MujocoPortal::initialize() {
     quat_offset_ = sensor_offset("orientation");
 
     // 6. Set initial pose: free-joint (3 pos + 4 quat) then per-joint positions.
+    //    When preparing, spawn at the prepare pose (the hardware safe pose) so the
+    //    policy's first command — toward default_joint_pos under running gains —
+    //    reproduces the real startup handoff transient.
+    const auto& spawn_pos = prepare_ ? task_cfg_.robot.prepare_state.joint_pos
+                                     : task_cfg_.robot.default_joint_pos;
     mj_data_->qpos[0] = 0.0; mj_data_->qpos[1] = 0.0;
     mj_data_->qpos[2] = static_cast<double>(cfg_.init_height);
     mj_data_->qpos[3] = 1.0; mj_data_->qpos[4] = 0.0;   // w, x
     mj_data_->qpos[5] = 0.0; mj_data_->qpos[6] = 0.0;   // y, z
     for (int i = 0; i < TaskConfig::NUM_JOINTS; i++)
-        mj_data_->qpos[joint_qpos_idx_[i]] = task_cfg_.robot.default_joint_pos[i];
+        mj_data_->qpos[joint_qpos_idx_[i]] = spawn_pos[i];
     mj_forward(mj_model_, mj_data_);
 
     // 5. Open viewer window.
     setupViewer();
 
     next_tick_ = Clock::now();
+
+    // 7. Settle at the prepare pose with prepare gains before the policy takes over.
+    if (prepare_) runPrepare();
+
     updateState();
     has_state_ = true;
     std::cout << "[MujocoPortal] Ready. Policy dt=" << task_cfg_.policy_dt
@@ -213,6 +235,15 @@ void MujocoPortal::updateState() {
         state_.base_lin_vel[1] = vy * (2*w2 - 1) - 2*w*cy + 2*y*dot_qv_v;
         state_.base_lin_vel[2] = vz * (2*w2 - 1) - 2*w*cz + 2*z*dot_qv_v;
     }
+
+    // Observation delay: state_ was just filled with the fresh read; push it and
+    // expose the one obs_delay_steps_ policy steps back (clamped during warmup).
+    if (obs_delay_steps_ > 0) {
+        obs_ring_.push_back(state_);
+        while (static_cast<int>(obs_ring_.size()) > obs_delay_steps_ + 1)
+            obs_ring_.pop_front();
+        state_ = obs_ring_.front();
+    }
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -221,11 +252,15 @@ void MujocoPortal::updateState() {
 
 void MujocoPortal::publishCommand(const float* targets,
                                   const float* kp, const float* kd) {
+    // With action delay, queue the command; tick() applies the delayed one. With
+    // no delay we still queue (depth 1) so a single code path drives target_.
+    DelayedCommand c;
     for (int i = 0; i < TaskConfig::NUM_JOINTS; i++) {
-        target_[i] = static_cast<double>(targets[i]);
-        kp_[i] = static_cast<double>(kp[i]);
-        kd_[i] = static_cast<double>(kd[i]);
+        c.target[i] = static_cast<double>(targets[i]);
+        c.kp[i]     = static_cast<double>(kp[i]);
+        c.kd[i]     = static_cast<double>(kd[i]);
     }
+    cmd_ring_.push_back(c);
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -233,6 +268,15 @@ void MujocoPortal::publishCommand(const float* targets,
 // ──────────────────────────────────────────────────────────────────────────────
 
 void MujocoPortal::tick() {
+    // Action delay: apply the command from action_delay_steps_ policy steps ago
+    // (front of the ring once warmed; newest when delay==0).
+    if (!cmd_ring_.empty()) {
+        while (static_cast<int>(cmd_ring_.size()) > action_delay_steps_ + 1)
+            cmd_ring_.pop_front();
+        const DelayedCommand& c = cmd_ring_.front();
+        target_ = c.target; kp_ = c.kp; kd_ = c.kd;
+    }
+
     // Debug hold: override policy commands with the default pose + trained gains.
     if (hold_pose_) {
         for (int i = 0; i < TaskConfig::NUM_JOINTS; i++) {
@@ -242,25 +286,7 @@ void MujocoPortal::tick() {
         }
     }
 
-    // Apply explicit PD torques and step physics (decimation times).
-    for (int s = 0; s < cfg_.decimation; s++) {
-        // Clear external generalized forces before writing this substep.
-        mju_zero(mj_data_->qfrc_applied, mj_model_->nv);
-        for (int i = 0; i < TaskConfig::NUM_JOINTS; i++) {
-            const double q = mj_data_->qpos[joint_qpos_idx_[i]];
-            const double dq = mj_data_->qvel[joint_dof_idx_[i]];
-            const double tau_raw = kp_[i] * (target_[i] - q) - kd_[i] * dq;
-            // Apply kd as implicit joint damping (integrated by the integrator),
-            // not as an explicit -kd*dq torque. This mirrors mjlab's position
-            // actuator and keeps the PD loop stable at the trained armature.
-            // mj_model_->dof_damping[joint_dof_idx_[i]] = kd_[i];
-            // const double tau_raw = kp_[i] * (target_[i] - q);
-            const double limit = static_cast<double>(task_cfg_.robot.effort_limit[i]);
-            const double tau = std::clamp(tau_raw, -limit, limit);
-            mj_data_->qfrc_applied[joint_dof_idx_[i]] = tau;
-        }
-        mj_step(mj_model_, mj_data_);
-    }
+    stepPhysics();
 
     // Render if viewer is open.
     if (window_ && !glfwWindowShouldClose(window_)) {
@@ -284,6 +310,43 @@ void MujocoPortal::tick() {
     next_tick_ += std::chrono::duration_cast<Clock::duration>(
         std::chrono::duration<float>(task_cfg_.policy_dt));
     std::this_thread::sleep_until(next_tick_);
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// stepPhysics()  — one policy step: decimation PD substeps (no render/sleep)
+// ──────────────────────────────────────────────────────────────────────────────
+
+void MujocoPortal::stepPhysics() {
+    for (int s = 0; s < cfg_.decimation; s++) {
+        // Clear external generalized forces before writing this substep.
+        mju_zero(mj_data_->qfrc_applied, mj_model_->nv);
+        for (int i = 0; i < TaskConfig::NUM_JOINTS; i++) {
+            const double q = mj_data_->qpos[joint_qpos_idx_[i]];
+            const double dq = mj_data_->qvel[joint_dof_idx_[i]];
+            const double tau_raw = kp_[i] * (target_[i] - q) - kd_[i] * dq;
+            const double limit = static_cast<double>(task_cfg_.robot.effort_limit[i]);
+            const double tau = std::clamp(tau_raw, -limit, limit);
+            mj_data_->qfrc_applied[joint_dof_idx_[i]] = tau;
+        }
+        mj_step(mj_model_, mj_data_);
+    }
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// runPrepare()  — settle at the prepare pose with prepare gains before the policy
+// ──────────────────────────────────────────────────────────────────────────────
+
+void MujocoPortal::runPrepare() {
+    const auto& prep = task_cfg_.robot.prepare_state;
+    for (int i = 0; i < TaskConfig::NUM_JOINTS; i++) {
+        target_[i] = static_cast<double>(prep.joint_pos[i]);
+        kp_[i]     = static_cast<double>(prep.stiffness[i]);
+        kd_[i]     = static_cast<double>(prep.damping[i]);
+    }
+    const int steps = static_cast<int>(prep.duration_s / task_cfg_.policy_dt);
+    for (int k = 0; k < steps; k++) stepPhysics();
+    std::cout << "[MujocoPortal] Prepared (settled " << prep.duration_s
+              << "s at prepare pose); handing off to policy.\n";
 }
 
 // ──────────────────────────────────────────────────────────────────────────────

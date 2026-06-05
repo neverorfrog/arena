@@ -9,8 +9,8 @@ struct VelocityCommandConfig {
     float vx_max   = 1.25f;  // forward/backward (m/s)
     float vy_max   = 1.0f;  // lateral strafe    (m/s)
     float vyaw_max = 1.0f;  // yaw rotation      (rad/s)
-    float ramp_vx   = 10.0f;  // max accel/decel on vx   (m/s²)
-    float ramp_vy   = 5.0f;  // max accel/decel on vy   (m/s²)
+    float ramp_vx   = 1.0f;  // max accel/decel on vx   (m/s²)
+    float ramp_vy   = 1.0f;  // max accel/decel on vy   (m/s²)
     float ramp_vyaw = 10.0f;  // max accel/decel on vyaw (rad/s²)
 };
 

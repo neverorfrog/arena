@@ -34,3 +34,13 @@ versions:
     path: jun4_6/t1-velocity_ppo_jun4_6.onnx
   jun4_7:
     path: jun4_7/t1-velocity_ppo_jun4_7.onnx
+  jun4_9:
+    path: jun4_9/t1-velocity_ppo_jun4_9.onnx
+  jun5_0:
+    path: jun5_0/t1-velocity_ppo_jun5_0.onnx
+  jun5_1:
+    path: jun5_1/t1-velocity_ppo_jun5_1.onnx
+  jun5_2:
+    path: jun5_2/t1-velocity_ppo_jun5_2.onnx
+  jun5_3:
+    path: jun5_3/t1-velocity_ppo_jun5_3.onnx
