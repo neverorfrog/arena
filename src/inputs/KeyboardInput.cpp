@@ -60,12 +60,12 @@ void KeyboardInput::applyKey(char key) {
     auto& ax1 = axes_[1]; auto& ax0 = axes_[0]; auto& ax3 = axes_[3];
     auto& ax5 = axes_[5];
     switch (key) {
-        case 'w': ax1.store(std::min(ax1.load() + kStep,  1.0f)); break;
-        case 's': ax1.store(std::max(ax1.load() - kStep, -1.0f)); break;
-        case 'a': ax0.store(std::min(ax0.load() + kStep,  1.0f)); break;
-        case 'd': ax0.store(std::max(ax0.load() - kStep, -1.0f)); break;
-        case 'q': ax3.store(std::min(ax3.load() + kStep,  1.0f)); break;
-        case 'e': ax3.store(std::max(ax3.load() - kStep, -1.0f)); break;
+        case 'w': ax1.store(std::max(ax1.load() - kStep, -1.0f)); break;
+        case 's': ax1.store(std::min(ax1.load() + kStep,  1.0f)); break;
+        case 'a': ax0.store(std::max(ax0.load() - kStep, -1.0f)); break;
+        case 'd': ax0.store(std::min(ax0.load() + kStep,  1.0f)); break;
+        case 'q': ax3.store(std::max(ax3.load() - kStep, -1.0f)); break;
+        case 'e': ax3.store(std::min(ax3.load() + kStep,  1.0f)); break;
         case ' ':
             for (auto& a : axes_) a.store(0.0f);
             break;
