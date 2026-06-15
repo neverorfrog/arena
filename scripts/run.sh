@@ -26,7 +26,7 @@ case "$1" in
         ;;
     run|runner)
         activate_env
-        exec build/aarch64/main --backend booster --task t1-velocity --model v2
+        exec build/aarch64/main --backend booster --task t1-velocity --model jun5_7
         ;;
     debug)
         activate_env

@@ -4,7 +4,7 @@
 #include <random>
 
 struct GaitPhaseCommandConfig {
-    float gait_freq_lo         = 1.9f;   // Hz (matches colosseum cat_cfg.py gait_freq_range=(1.5, 2.0))
+    float gait_freq_lo         = 2.0f;   // Hz (matches colosseum cat_cfg.py gait_freq_range=(1.5, 2.0))
     float gait_freq_hi         = 2.0f;   // Hz
     float speed_max            = 1.0f;   // m/s for freq scaling
     float gate_speed_threshold = 0.05f;  // m/s, gates on horizontal speed norm

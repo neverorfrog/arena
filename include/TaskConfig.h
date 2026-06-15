@@ -1,6 +1,7 @@
 #pragma once
 #include "RobotConfig.h"
 #include <string>
+#include <vector>
 
 // Task-level deployment configuration.
 //
@@ -8,8 +9,7 @@
 // and are shared across any task that uses the same robot platform.
 // Task-specific fields are: model checkpoint, timing, action scale, scene XML.
 struct TaskConfig {
-    static constexpr int NUM_JOINTS  = 23;  // total robot joints
-    static constexpr int NUM_ACTIONS = 21;  // policy output dim (head joints excluded)
+    static constexpr int NUM_JOINTS  = 23;  // total robot joints (hardware)
     using Robot = RobotConfig<NUM_JOINTS>;
 
     std::string task_name;
@@ -17,15 +17,16 @@ struct TaskConfig {
     std::string model_path;       // Path to ONNX checkpoint (resolved by ModelRegistry)
     float       policy_dt   = 0.02f;  // Policy step period (s) — 50 Hz
 
-    // Per-action scale (21 elements, one per policy output).
+    // Per-action scale, one per policy output. Size must equal the skill's
+    // policy output dimension (engine output_dim).
     // Decoded: target[joint] = net_out[a] * action_scale[a] + default_joint_pos[joint]
     // where joint = action_to_joint_idx[a].
-    // Must match training: typically 0.25 (Python PolicyConfig.action_scale).
-    std::array<float, NUM_ACTIONS> action_scale{};
+    std::vector<float> action_scale;
 
-    // Maps action index (0..NUM_ACTIONS-1) to hardware joint index (0..NUM_JOINTS-1).
-    // Head joints are excluded; their targets come from post_decode_action.
-    std::array<int, NUM_ACTIONS> action_to_joint_idx{};
+    // Maps action index → hardware joint index (0..NUM_JOINTS-1). Same size as
+    // action_scale. Joints not listed are held at their default pose by the
+    // merged target buffer.
+    std::vector<int> action_to_joint_idx;
 
     // Inference backend: "onnx" (default) or "trt" (TensorRT).
     // Threaded through Policy → make_engine() factory.

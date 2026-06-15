@@ -28,7 +28,7 @@ struct FootContactConfig {
                                       // over min(4, ground_condim=3)=3; without this
                                       // torsional friction is silently dropped and the
                                       // stance foot yaws freely (snake-like motion)
-    float friction_sliding   = 0.6f;  // matches FEET_ONLY_COLLISION base value
+    float friction_sliding   = 1.0f;  // matches FEET_ONLY_COLLISION base value
     float friction_torsional = 0.05f;
 };
 

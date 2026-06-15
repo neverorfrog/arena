@@ -49,7 +49,20 @@ LocomotionSkill::LocomotionSkill(const TaskConfig& cfg)
       robot_data_(cfg.robot),
       engine_(make_engine(cfg)),
       input_source_(create_input_source()) {
+    // The policy's action count is the model's output dimension — owned by this
+    // skill, not the task. The task only wires the per-action scale and joint
+    // mapping, which must match.
+    num_actions_ = engine_->output_dim();
+    if (static_cast<int>(cfg.action_scale.size()) != num_actions_ ||
+        static_cast<int>(cfg.action_to_joint_idx.size()) != num_actions_) {
+        throw std::runtime_error(
+            "LocomotionSkill: action_scale/action_to_joint_idx size (" +
+            std::to_string(cfg.action_scale.size()) + "/" +
+            std::to_string(cfg.action_to_joint_idx.size()) +
+            ") must match policy output dim (" + std::to_string(num_actions_) + ")");
+    }
     observation_.reserve(engine_->input_dim());
+    last_action_.assign(num_actions_, 0.0f);
 }
 
 LocomotionSkill::~LocomotionSkill() {
@@ -57,7 +70,7 @@ LocomotionSkill::~LocomotionSkill() {
 }
 
 void LocomotionSkill::reset() {
-    last_action_.fill(0.0f);
+    std::fill(last_action_.begin(), last_action_.end(), 0.0f);
 }
 
 float LocomotionSkill::wrap_to_pi(float a) {
@@ -119,7 +132,7 @@ void LocomotionSkill::build_observation(const RobotState& state) {
     }
 
     // 5. Last action (21, raw network output)
-    for (int i = 0; i < TaskConfig::NUM_ACTIONS; i++) {
+    for (int i = 0; i < num_actions_; i++) {
         observation_.push_back(last_action_[i]);
     }
 
@@ -188,7 +201,7 @@ void LocomotionSkill::compute(const RobotState& state,
             std::cout << "obs[0-2]:    [" << observation_[0] << " " << observation_[1]
                       << " " << observation_[2] << "] (range " << omin << ".." << omax << ")\n";
             float amin = 999, amax = -999;
-            for (int i = 0; i < TaskConfig::NUM_ACTIONS; i++) {
+            for (int i = 0; i < num_actions_; i++) {
                 if (action_vec[i] < amin) amin = action_vec[i];
                 if (action_vec[i] > amax) amax = action_vec[i];
             }
@@ -197,8 +210,8 @@ void LocomotionSkill::compute(const RobotState& state,
         dbg_step++;
     }
 
-    // Store raw network output (21 values) and decode the 21 body joints.
-    for (int a = 0; a < TaskConfig::NUM_ACTIONS; a++) {
+    // Store raw network output and decode the policy-driven joints.
+    for (int a = 0; a < num_actions_; a++) {
         last_action_[a] = action_vec[a];
         int j = config_.action_to_joint_idx[a];  // a + 2 (head excluded)
         targets[j] = action_vec[a] * config_.action_scale[a]

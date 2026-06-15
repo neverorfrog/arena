@@ -49,6 +49,6 @@ private:
         task_name,                                                          \
         [](const std::string& model_name,                                   \
            const std::string& backend) -> std::unique_ptr<Policy> {         \
-            return std::make_unique<ClassName>(model_name, backend);        \
+            return std::make_unique<ClassName>(task_name, model_name, backend); \
         }                                                                   \
     );

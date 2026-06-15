@@ -34,6 +34,8 @@ versions:
     path: jun4_6/t1-velocity_ppo_jun4_6.onnx
   jun4_7:
     path: jun4_7/t1-velocity_ppo_jun4_7.onnx
+  jun4_8:
+    path: jun4_8/t1-velocity_ppo_jun4_8.onnx
   jun4_9:
     path: jun4_9/t1-velocity_ppo_jun4_9.onnx
   jun5_0:
@@ -44,3 +46,59 @@ versions:
     path: jun5_2/t1-velocity_ppo_jun5_2.onnx
   jun5_3:
     path: jun5_3/t1-velocity_ppo_jun5_3.onnx
+  jun5_4:
+    path: jun5_4/t1-velocity_ppo_jun5_4.onnx
+  jun5_5:
+    path: jun5_5/t1-velocity_ppo_jun5_5.onnx
+  jun5_6:
+    path: jun5_6/t1-velocity_ppo_jun5_6.onnx
+  jun5_7:
+    path: jun5_7/t1-velocity_ppo_jun5_7.onnx
+  jun8_0:
+    path: jun8_0/t1-velocity_ppo_jun8_0.onnx
+  jun8_1:
+    path: jun8_1/t1-velocity_ppo_jun8_1.onnx
+  jun9_1:
+    path: jun9_1/t1-velocity_ppo_jun9_1.onnx
+  jun9_2:
+    path: jun9_2/t1-velocity_ppo_jun9_2.onnx
+  jun9_3:
+    path: jun9_3/t1-velocity_ppo_jun9_3.onnx
+  jun9_4:
+    path: jun9_4/t1-velocity_ppo_jun9_4.onnx
+  jun9_5:
+    path: jun9_5/t1-velocity_ppo_jun9_5.onnx
+  jun10_1:
+    path: jun10_1/t1-velocity_ppo_jun10_1.onnx
+  jun10_2:
+    path: jun10_2/t1-velocity_ppo_jun10_2.onnx
+  jun11_1:
+    path: jun11_1/t1-velocity_ppo_jun11_1.onnx
+  jun11_2:
+    path: jun11_2/t1-velocity_ppo_jun11_2.onnx
+  jun12_1:
+    path: jun12_1/t1-velocity_ppo_jun12_1.onnx
+  jun12_2:
+    path: jun12_2/t1-velocity_ppo_jun12_2.onnx
+  jun12_3:
+    path: jun12_3/t1-velocity_ppo_jun12_3.onnx
+  jun12_4:
+    path: jun12_4/t1-velocity_ppo_jun12_4.onnx
+  jun12_5:
+    path: jun12_5/t1-velocity_ppo_jun12_5.onnx
+  jun13_4:
+    path: jun13_4/t1-velocity_ppo_jun13_4.onnx
+  jun13_3:
+    path: jun13_3/t1-velocity_ppo_jun13_3.onnx
+  jun13_2:
+    path: jun13_2/t1-velocity_ppo_jun13_2.onnx
+  jun13_1:
+    path: jun13_1/t1-velocity_ppo_jun13_1.onnx
+  jun13_5:
+    path: jun13_5/t1-velocity_ppo_jun13_5.onnx
+  jun13_6:
+    path: jun13_6/t1-velocity_ppo_jun13_6.onnx
+  jun14_1:
+    path: jun14_1/t1-velocity_ppo_jun14_1.onnx
+  jun14_2:
+    path: jun14_2/t1-velocity_ppo_jun14_2.onnx

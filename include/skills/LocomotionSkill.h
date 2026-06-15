@@ -37,9 +37,12 @@ public:
                  std::array<float, TaskConfig::NUM_JOINTS>& targets) override;
     void reset() override;
 
-private:
+protected:
     void  update_input();
-    void  build_observation(const RobotState& state);
+    // Build the observation vector for this policy. The base implementation is
+    // the 23-DOF body layout; LocomotionSkill12 overrides it for the legs-only
+    // 12-DOF layout. Writes into observation_.
+    virtual void build_observation(const RobotState& state);
     static float wrap_to_pi(float a);
 
     TaskConfig config_;
@@ -47,8 +50,9 @@ private:
     std::unique_ptr<IInferenceEngine> engine_;
     std::unique_ptr<IInputSource>     input_source_;
 
+    int num_actions_ = 0;  // policy output dimension, from engine_->output_dim()
     std::vector<float> observation_;
-    std::array<float, TaskConfig::NUM_ACTIONS> last_action_{};
+    std::vector<float> last_action_;  // sized num_actions_, raw network output
 
     // Task-specific command. Limits (1 m/s, 1 m/s, 1 rad/s) match training.
     VelocityCommand  vel_command_{VelocityCommandConfig{1.0f, 1.0f, 1.0f}};
