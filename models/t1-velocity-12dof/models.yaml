@@ -4,3 +4,7 @@ versions:
     path: jun14_1/t1-velocity-12dof_ppo_jun14_1.onnx
   jun14_2:
     path: jun14_2/t1-velocity-12dof_ppo_jun14_2.onnx
+  jun15_1:
+    path: jun15_1/t1-velocity-12dof_ppo_jun15_1.onnx
+  jun15_2:
+    path: jun15_2/t1-velocity-12dof_ppo_jun15_2.onnx
