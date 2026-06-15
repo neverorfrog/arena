@@ -1,0 +1,6 @@
+default: jun14_1
+versions:
+  jun14_1:
+    path: jun14_1/t1-velocity-12dof_ppo_jun14_1.onnx
+  jun14_2:
+    path: jun14_2/t1-velocity-12dof_ppo_jun14_2.onnx
