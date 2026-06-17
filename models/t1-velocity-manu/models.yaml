@@ -1,0 +1,4 @@
+default: jun16_1
+versions:
+  jun16_1:
+    path: jun16_1/t1-velocity-manu_ppo_jun16_1.onnx

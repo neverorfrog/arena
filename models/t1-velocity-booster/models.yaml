@@ -1,0 +1,4 @@
+default: jun15_1
+versions:
+  jun15_1:
+    path: jun15_1/t1-velocity-booster_ppo_jun15_1.onnx

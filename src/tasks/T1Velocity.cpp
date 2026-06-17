@@ -102,8 +102,8 @@ class T1Velocity : public Policy {
                 1.0f, 1.0f, 1.0f, 1.0f,
                 1.0f, 1.0f, 1.0f, 1.0f,
                 5.0f,
-                5.0f, 5.0f, 5.0f, 5.0f, 1.2f, 1.2f,
-                5.0f, 5.0f, 5.0f, 5.0f, 1.2f, 1.2f,
+                5.0f, 5.0f, 5.0f, 5.0f, 2.5f, 2.5f,
+                5.0f, 5.0f, 5.0f, 5.0f, 2.5f, 2.5f,
             };
 
             cfg.robot.effort_limit = {
@@ -124,7 +124,7 @@ class T1Velocity : public Policy {
                 0.0523908f, 0.0478125f, 0.0478125f, 0.0636012f, 0.0679104f, 0.0679104f,  // Left leg
                 0.0523908f, 0.0478125f, 0.0478125f, 0.0636012f, 0.0679104f, 0.0679104f,  // Right leg
             };
-            
+
             // Coulomb friction loss per joint — matches colosseum actuators.py.
             cfg.robot.joint_frictionloss = {
                 0.03f, 0.03f,
