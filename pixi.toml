@@ -27,7 +27,7 @@ glfw = "*"
 libgl-devel = "*"
 libegl-devel = "*"
 gtest = "*"
-cuda-cudart-dev = "*"
+cuda-cudart-dev = "==12.9.79"
 
 [target.linux-64.dependencies]
 gcc_linux-64 = ">=14.3.0,<15"

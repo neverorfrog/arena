@@ -71,6 +71,7 @@ LocomotionSkill::~LocomotionSkill() {
 
 void LocomotionSkill::reset() {
     std::fill(last_action_.begin(), last_action_.end(), 0.0f);
+    engine_->reset_state();  // clear the RMA obs window (no-op for stateless models)
 }
 
 float LocomotionSkill::wrap_to_pi(float a) {
@@ -88,8 +89,8 @@ float LocomotionSkill::wrap_to_pi(float a) {
 // heading_control_stiffness=0.5).
 void LocomotionSkill::update_input() {
     if (!input_source_) return;
-    vel_command_.vx = -input_source_->get_axis(1) * vel_command_.vx_max;
-    vel_command_.vy = -input_source_->get_axis(0) * vel_command_.vy_max;
+    vel_command_.target_vx = -input_source_->get_axis(1) * vel_command_.vx_max;
+    vel_command_.target_vy = -input_source_->get_axis(0) * vel_command_.vy_max;
     const float raw_yaw = -input_source_->get_axis(3);
     if (std::abs(raw_yaw) < 0.05f) {
         if (!heading_locked_) {
@@ -97,11 +98,11 @@ void LocomotionSkill::update_input() {
             heading_target_ = last_yaw_;
         }
         const float err = wrap_to_pi(heading_target_ - last_yaw_);
-        vel_command_.vyaw = std::clamp(0.5f * err, -vel_command_.vyaw_max, vel_command_.vyaw_max);
+        vel_command_.target_vyaw = std::clamp(0.5f * err, -vel_command_.vyaw_max, vel_command_.vyaw_max);
     } else {
         heading_locked_ = false;
         heading_target_ = last_yaw_;
-        vel_command_.vyaw = raw_yaw * vel_command_.vyaw_max;
+        vel_command_.target_vyaw = raw_yaw * vel_command_.vyaw_max;
     }
 }
 

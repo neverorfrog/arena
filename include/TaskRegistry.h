@@ -44,8 +44,15 @@ private:
     std::unordered_map<std::string, Factory> factories_;
 };
 
+// Internal: paste a unique suffix so the same ClassName can be registered under
+// several task names (e.g. "t1-velocity" and "t1-velocity-rma") without the
+// static registrar variables colliding.
+#define _REGISTER_TASK_CONCAT(a, b) a##b
+#define _REGISTER_TASK_NAME(a, b)   _REGISTER_TASK_CONCAT(a, b)
+
 #define REGISTER_TASK(task_name, ClassName)                                 \
-    static TaskRegistry::Registrar __##ClassName##_registrar(               \
+    static TaskRegistry::Registrar                                          \
+    _REGISTER_TASK_NAME(_task_registrar_, __LINE__)(                        \
         task_name,                                                          \
         [](const std::string& model_name,                                   \
            const std::string& backend) -> std::unique_ptr<Policy> {         \

@@ -61,57 +61,61 @@ else()
 endif()
 
 # TensorRT (optional -- enables --inference trt at runtime)
-find_library(TENSORRT_LIB nvinfer)
-if(TENSORRT_LIB)
-  # In aarch64 cross-compile, find_package(CUDAToolkit) reports include dirs
-  # under the (x86_64) conda env which don't exist on disk, and bakes them
-  # into the CUDA::cudart imported target. Locate cudart and the headers in
-  # the sysroot directly instead.
-  if(CMAKE_CROSSCOMPILING)
-    find_library(CUDA_CUDART cudart
-      HINTS ${CMAKE_SYSROOT}/lib
-            ${CMAKE_SYSROOT}/targets/aarch64-linux/lib
-      NO_DEFAULT_PATH
-      REQUIRED
-    )
-    find_path(CUDA_INCLUDE_DIR cuda_runtime_api.h
-      HINTS ${CMAKE_SYSROOT}/targets/aarch64-linux/include
-            ${CMAKE_SYSROOT}/targets/sbsa-linux/include
-            ${CONDA_PREFIX}/targets/x86_64-linux/include
-      NO_DEFAULT_PATH
-      REQUIRED
-    )
-    # NvInfer.h is bundled in external/TensorRT/, outside the sysroot.
-    # NO_CMAKE_FIND_ROOT_PATH bypasses the sysroot-only restriction.
-    find_path(TENSORRT_INCLUDE_DIR NvInfer.h
-      HINTS ${CMAKE_SOURCE_DIR}/external/TensorRT/aarch64/include
-            ${CMAKE_SOURCE_DIR}/external/TensorRT/x86/include
-            ${CONDA_PREFIX}/include
-      NO_CMAKE_FIND_ROOT_PATH
-      REQUIRED
-    )
-  else()
-    find_library(CUDA_CUDART cudart
-      HINTS $ENV{CONDA_PREFIX}/lib
-    )
-    find_path(CUDA_INCLUDE_DIR cuda_runtime_api.h
-      HINTS $ENV{CONDA_PREFIX}/targets/x86_64-linux/include
-    )
-    find_path(TENSORRT_INCLUDE_DIR NvInfer.h
-      HINTS ${CMAKE_SOURCE_DIR}/external/TensorRT/x86/include
-    )
-    if(NOT CUDA_CUDART OR NOT CUDA_INCLUDE_DIR OR NOT TENSORRT_INCLUDE_DIR)
-      message(STATUS "CUDA or TensorRT headers not found -- TRT backend disabled")
-      set(TENSORRT_LIB "" CACHE INTERNAL "" FORCE)
-    endif()
-  endif()
+# Off by default; pass -DWITH_TRT=ON to enable.
+option(WITH_TRT "Build with TensorRT support" OFF)
+if(WITH_TRT)
+  find_library(TENSORRT_LIB nvinfer)
   if(TENSORRT_LIB)
-    message(STATUS "TensorRT found -- TRT backend enabled")
-    message(STATUS "  nvinfer:    ${TENSORRT_LIB}")
-    message(STATUS "  NvInfer.h:  ${TENSORRT_INCLUDE_DIR}")
-    message(STATUS "  cudart:     ${CUDA_CUDART}")
-    message(STATUS "  CUDA:       ${CUDA_INCLUDE_DIR}")
-    set(WITH_TRT ON)
+    # In aarch64 cross-compile, find_package(CUDAToolkit) reports include dirs
+    # under the (x86_64) conda env which don't exist on disk, and bakes them
+    # into the CUDA::cudart imported target. Locate cudart and the headers in
+    # the sysroot directly instead.
+    if(CMAKE_CROSSCOMPILING)
+      find_library(CUDA_CUDART cudart
+        HINTS ${CMAKE_SYSROOT}/lib
+              ${CMAKE_SYSROOT}/targets/aarch64-linux/lib
+        NO_DEFAULT_PATH
+        REQUIRED
+      )
+      find_path(CUDA_INCLUDE_DIR cuda_runtime_api.h
+        HINTS ${CMAKE_SYSROOT}/targets/aarch64-linux/include
+              ${CMAKE_SYSROOT}/targets/sbsa-linux/include
+              ${CONDA_PREFIX}/targets/x86_64-linux/include
+        NO_DEFAULT_PATH
+        REQUIRED
+      )
+      # NvInfer.h is bundled in external/TensorRT/, outside the sysroot.
+      # NO_CMAKE_FIND_ROOT_PATH bypasses the sysroot-only restriction.
+      find_path(TENSORRT_INCLUDE_DIR NvInfer.h
+        HINTS ${CMAKE_SOURCE_DIR}/external/TensorRT/aarch64/include
+              ${CMAKE_SOURCE_DIR}/external/TensorRT/x86/include
+              ${CONDA_PREFIX}/include
+        NO_CMAKE_FIND_ROOT_PATH
+        REQUIRED
+      )
+    else()
+      find_library(CUDA_CUDART cudart
+        HINTS $ENV{CONDA_PREFIX}/lib
+      )
+      find_path(CUDA_INCLUDE_DIR cuda_runtime_api.h
+        HINTS $ENV{CONDA_PREFIX}/targets/x86_64-linux/include
+      )
+      find_path(TENSORRT_INCLUDE_DIR NvInfer.h
+        HINTS ${CMAKE_SOURCE_DIR}/external/TensorRT/x86/include
+      )
+      if(NOT CUDA_CUDART OR NOT CUDA_INCLUDE_DIR OR NOT TENSORRT_INCLUDE_DIR)
+        message(STATUS "CUDA or TensorRT headers not found -- TRT backend disabled")
+        set(TENSORRT_LIB "" CACHE INTERNAL "" FORCE)
+      endif()
+    endif()
+    if(TENSORRT_LIB)
+      message(STATUS "TensorRT found -- TRT backend enabled")
+      message(STATUS "  nvinfer:    ${TENSORRT_LIB}")
+      message(STATUS "  NvInfer.h:  ${TENSORRT_INCLUDE_DIR}")
+      message(STATUS "  cudart:     ${CUDA_CUDART}")
+      message(STATUS "  CUDA:       ${CUDA_INCLUDE_DIR}")
+      set(WITH_TRT ON)
+    endif()
   endif()
 endif()
 

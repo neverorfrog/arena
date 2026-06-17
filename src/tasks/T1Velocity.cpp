@@ -184,3 +184,9 @@ class T1Velocity : public Policy {
 };
 
 REGISTER_TASK("t1-velocity", T1Velocity);
+
+// RMA variant: identical robot/scene/skills, only the checkpoint differs.
+// Registering the same class under this name routes model resolution to
+// models/t1-velocity-rma/ (its models.yaml). The RMA checkpoint is a stateful
+// ONNX (obs window); OnnxInferenceEngine handles that transparently.
+REGISTER_TASK("t1-velocity-rma", T1Velocity);
