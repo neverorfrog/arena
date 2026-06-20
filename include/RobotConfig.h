@@ -29,7 +29,7 @@ struct FootContactConfig {
                                       // torsional friction is silently dropped and the
                                       // stance foot yaws freely (snake-like motion)
     float friction_sliding   = 1.0f;  // matches FEET_ONLY_COLLISION base value
-    float friction_torsional = 0.05f;
+    float friction_torsional = 0.1f;
 };
 
 // Robot hardware specification. Task-agnostic: does not know about observations,

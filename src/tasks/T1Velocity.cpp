@@ -39,19 +39,13 @@ class T1Velocity : public Policy {
                 : ModelRegistry::resolve(cfg.task_name, model_name).string();
             cfg.policy_dt    = 0.02f;
 
-            cfg.action_scale = {
-                0.0f, 0.0f, 0.0f, 0.0f,                        // Left arm
-                0.0f, 0.0f, 0.0f, 0.0f,                        // Right arm
-                0.0f,                                              // Waist
-                0.25f, 0.25f, 0.25f, 0.25f, 0.25f, 0.25f,         // Left leg
-                0.25f, 0.25f, 0.25f, 0.25f, 0.25f, 0.25f,         // Right leg
-            };
-
             // Action-to-joint mapping: 21 policy outputs → 23 hardware joints.
             // Head joints (indices 0,1: AAHead_yaw, Head_pitch) are excluded;
-            // they are driven by HeadSkill.
-            cfg.action_to_joint_idx.resize(cfg.action_scale.size());
-            for (size_t a = 0; a < cfg.action_to_joint_idx.size(); a++)
+            // they are driven by HeadSkill. action_scale is loaded from gains.yaml
+            // by the Policy base constructor (per-joint, in this action order).
+            constexpr int kNumActions = TaskConfig::NUM_JOINTS - 2;
+            cfg.action_to_joint_idx.resize(kNumActions);
+            for (int a = 0; a < kNumActions; a++)
                 cfg.action_to_joint_idx[a] = a + 2;  // skip head indices 0,1
 
             // ── Scene (MujocoPortal) ──────────────────────────────────────────
@@ -79,61 +73,9 @@ class T1Velocity : public Policy {
                 "Right_Knee_Pitch","Right_Ankle_Pitch","Right_Ankle_Roll",
             };
 
-            cfg.robot.default_joint_pos = {
-                0.0f,  0.0f,                            // Head yaw, pitch
-                0.2f, -1.35f, 0.0f, -0.5f,              // Left arm
-                0.2f,  1.35f, 0.0f,  0.5f,              // Right arm
-                0.0f,                                 // Waist
-                -0.24f, 0.0f, 0.0f, 0.5f, -0.3f, 0.0f, // Left leg
-                -0.24f, 0.0f, 0.0f, 0.5f, -0.3f, 0.0f, // Right leg
-            };
-
-            cfg.robot.joint_stiffness     = {
-                4.0f,   4.0f,
-                50.0f,  50.0f,  50.0f, 50.0f,
-                50.0f,  50.0f,  50.0f, 50.0f,
-                200.0f,
-                200.0f, 200.0f, 200.0f, 200.0f, 50.0f, 50.0f,
-                200.0f, 200.0f, 200.0f, 200.0f, 50.0f, 50.0f,
-            };
-
-            cfg.robot.joint_damping = {
-                1.0f, 1.0f,
-                1.0f, 1.0f, 1.0f, 1.0f,
-                1.0f, 1.0f, 1.0f, 1.0f,
-                5.0f,
-                5.0f, 5.0f, 5.0f, 5.0f, 2.5f, 2.5f,
-                5.0f, 5.0f, 5.0f, 5.0f, 2.5f, 2.5f,
-            };
-
-            cfg.robot.effort_limit = {
-                7.0f,  7.0f,                                        // Head
-                18.0f, 18.0f, 18.0f, 18.0f,                        // Left arm
-                18.0f, 18.0f, 18.0f, 18.0f,                        // Right arm
-                30.0f,                                              // Waist
-                45.0f, 30.0f, 30.0f, 65.0f, 24.0f, 15.0f,         // Left leg
-                45.0f, 30.0f, 30.0f, 65.0f, 24.0f, 15.0f,         // Right leg
-            };
-
-            // Reflected motor inertia per joint — matches colosseum actuators.py.
-            cfg.robot.joint_armature = {
-                0.0018000f, 0.0018000f,                                 // Head
-                0.0282528f, 0.0282528f, 0.0282528f, 0.0282528f,       // Left arm
-                0.0282528f, 0.0282528f, 0.0282528f, 0.0282528f,       // Right arm
-                0.0478125f,                                             // Waist
-                0.0523908f, 0.0478125f, 0.0478125f, 0.0636012f, 0.0679104f, 0.0679104f,  // Left leg
-                0.0523908f, 0.0478125f, 0.0478125f, 0.0636012f, 0.0679104f, 0.0679104f,  // Right leg
-            };
-
-            // Coulomb friction loss per joint — matches colosseum actuators.py.
-            cfg.robot.joint_frictionloss = {
-                0.03f, 0.03f,
-                0.03f, 0.03f, 0.03f, 0.03f,
-                0.03f, 0.03f, 0.03f, 0.03f,
-                0.03f,
-                0.03f, 0.03f, 0.03f, 0.03f, 0.03f, 0.03f,
-                0.03f, 0.03f, 0.03f, 0.03f, 0.03f, 0.03f,
-            };
+            // PD gains, armature, friction, effort limit, default pose and action
+            // scale are loaded from gains.yaml (next to the ONNX) by the Policy base
+            // constructor — single source of truth with training.
 
             // Mechanically coupled ankle pairs (crank mechanism).
             cfg.robot.parallel_joint_indices = {15, 16, 21, 22};
@@ -190,3 +132,8 @@ REGISTER_TASK("t1-velocity", T1Velocity);
 // models/t1-velocity-rma/ (its models.yaml). The RMA checkpoint is a stateful
 // ONNX (obs window); OnnxInferenceEngine handles that transparently.
 REGISTER_TASK("t1-velocity-rma", T1Velocity);
+
+// Manufacturer-actuator variant: identical robot/scene/skills — only the gains
+// differ, and those now travel with the checkpoint via gains.yaml. So it is just
+// another registration of the same class, routing to models/t1-velocity-manu/.
+REGISTER_TASK("t1-velocity-manu", T1Velocity);

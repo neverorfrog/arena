@@ -1,0 +1,4 @@
+default: jun20_1
+versions:
+  jun20_1:
+    path: jun20_1/t1-velocity-amp_ampppo_jun20_1.onnx

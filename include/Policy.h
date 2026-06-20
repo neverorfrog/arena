@@ -1,4 +1,5 @@
 #pragma once
+#include "GainsLoader.h"
 #include "RobotState.h"
 #include "TaskConfig.h"
 #include "skills/Skill.h"
@@ -24,6 +25,16 @@
 class Policy {
 public:
     explicit Policy(TaskConfig cfg) : config_(std::move(cfg)) {
+        // Load per-joint deploy gains (PD, armature, friction, effort, default pose,
+        // action scale) from the gains.yaml shipped next to the resolved ONNX — the
+        // single source of truth shared with training. Subclasses only set joint
+        // names and the action→joint mapping; the gains travel with the checkpoint.
+        GainsMap gains =
+            ModelConfig::parse_gains(gains_path_for_model(config_.model_path));
+        apply_gains(gains, config_.robot);
+        config_.action_scale = build_action_scale<TaskConfig::NUM_JOINTS>(
+            gains, config_.robot.joint_names, config_.action_to_joint_idx);
+
         std::copy(config_.robot.default_joint_pos.begin(),
                   config_.robot.default_joint_pos.end(), merged_.begin());
     }
