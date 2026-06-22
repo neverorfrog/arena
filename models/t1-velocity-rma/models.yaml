@@ -6,3 +6,5 @@ versions:
     path: jun18_1/t1-velocity-rma_rmappo_jun18_1.onnx
   jun19_1:
     path: jun19_1/t1-velocity-rma_rmappo_jun19_1.onnx
+  jun20_1:
+    path: jun20_1/t1-velocity-rma_rmappo_jun20_1.onnx

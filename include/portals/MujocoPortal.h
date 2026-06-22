@@ -28,7 +28,7 @@ struct MujocoConfig {
     // reproduced here. obs_delay_steps delays what getState() exposes to the
     // policy; action_delay_steps delays when published commands reach physics.
     // Overridable at runtime via ARENA_OBS_DELAY / ARENA_ACT_DELAY.
-    int   obs_delay_steps    = 1;
+    int   obs_delay_steps    = 0;
     int   action_delay_steps = 1;
 
     // Settle at the prepare pose with prepare gains before handing to the policy,

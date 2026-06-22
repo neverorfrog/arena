@@ -2,3 +2,5 @@ default: jun17_1
 versions:
   jun17_1:
     path: jun17_1/t1-dribbling-residual_residualppo_jun17_1.onnx
+  jun20_1:
+    path: jun20_1/t1-dribbling-residual_residualppo_jun20_1.onnx

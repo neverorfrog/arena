@@ -1,0 +1,18 @@
+default: jun20_1
+versions:
+  jun20_1:
+    path: jun20_1/t1-kicking-residual_residualppo_jun20_1.onnx
+  jun20_2:
+    path: jun20_2/t1-kicking-residual_residualppo_jun20_2.onnx
+  jun20_3:
+    path: jun20_3/t1-kicking-residual_residualppo_jun20_3.onnx
+  jun20_4:
+    path: jun20_4/t1-kicking-residual_residualppo_jun20_4.onnx
+  jun21_1:
+    path: jun21_1/t1-kicking-residual_residualppo_jun21_1.onnx
+  jun21_2:
+    path: jun21_2/t1-kicking-residual_residualppo_jun21_2.onnx
+  jun21_3:
+    path: jun21_3/t1-kicking-residual_residualppo_jun21_3.onnx
+  jun22_1:
+    path: jun22_1/t1-kicking-residual_residualppo_jun22_1.onnx
