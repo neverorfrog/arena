@@ -9,11 +9,11 @@ struct VelocityCommandConfig {
     float vx_max   = 1.0f;  // forward/backward (m/s)
     float vy_max   = 1.0f;  // lateral strafe    (m/s)
     float vyaw_max = 1.0f;  // yaw rotation      (rad/s)
-    float ramp_vx   = 2.0f;  // max accel/decel on vx   (m/s²)
-    float ramp_vy   = 2.0f;  // max accel/decel on vy   (m/s²)
-    float ramp_vyaw = 2.0f;  // max accel/decel on vyaw (rad/s²)
+    float ramp_vx   = 5.0f;  // max accel/decel on vx   (m/s²)
+    float ramp_vy   = 5.0f;  // max accel/decel on vy   (m/s²)
+    float ramp_vyaw = 5.0f;  // max accel/decel on vyaw (rad/s²)
     float soft_stop_speed = 0.055f;  // low speed held before final stop (0 = disabled)
-    float soft_stop_hold  = 0.5f;    // time to decelerate from soft_stop_speed to 0 (s)
+    float soft_stop_hold  = 0.75f;    // time to decelerate from soft_stop_speed to 0 (s)
 };
 
 // Current velocity command plus its limits. Embedded in RobotState.
@@ -67,8 +67,7 @@ struct VelocityCommand {
     void step_filter(float dt) {
         auto ramp_one = [this](float& cur, float tgt, float max_rate, float dt_step) {
             float rate = max_rate;
-            float soft_rate = (soft_stop_speed > 0.0f)
-                ? soft_stop_speed / soft_stop_hold : 0.0f;
+            float soft_rate = (soft_stop_speed > 0.0f) ? soft_stop_speed / soft_stop_hold : 0.0f;
 
             if (tgt == 0.0f && soft_rate > 0.0f && std::fabs(cur) < soft_stop_speed && cur != 0.0f) {
                 rate = soft_rate;

@@ -62,4 +62,9 @@ protected:
     float last_yaw_       = 0.0f;
     float heading_target_ = 0.0f;
     bool  heading_locked_ = false;
+
+    // Cold-start warmup: while >0, run inference to fill the recurrent obs window
+    // but hold the default pose instead of applying the (transient) policy output.
+    // Seeded from engine_->warmup_steps() (0 for stateless models).
+    int warmup_remaining_ = 0;
 };

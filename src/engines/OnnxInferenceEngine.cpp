@@ -6,6 +6,7 @@
 #include <numeric>
 #include <stdexcept>
 #include <string>
+#include <iostream>
 
 // Validates model path before it's passed to Ort::Session (which segfaults on bad paths).
 static const std::string& checked_path(const std::string& path) {
@@ -65,6 +66,27 @@ OnnxInferenceEngine::OnnxInferenceEngine(const std::string& model_path)
     // so these stay valid for every Run() call.
     for (const auto& n : input_names_)  input_name_ptrs_.push_back(n.c_str());
     for (const auto& n : output_names_) output_name_ptrs_.push_back(n.c_str());
+
+    // If the single recurrent state is an observation window ([*, depth, obs_dim]),
+    // its depth is how many steps it takes to fill from a cold start. Exposed via
+    // warmup_steps() so the caller can flush the zero-window startup transient.
+    if (states_.size() == 1 && states_[0].shape.size() == 3 &&
+        static_cast<int>(states_[0].shape.back()) == input_dim_) {
+        warmup_steps_ = static_cast<int>(states_[0].shape[1]);
+    }
+
+    // DIAG: confirm stateful detection + recurrent-window size (cold-start probe).
+    std::cerr << "[engine] obs_dim=" << input_dim_ << " act_dim=" << output_dim_
+              << " state_tensors=" << states_.size() << "\n";
+    for (size_t i = 0; i < states_.size(); ++i) {
+        std::cerr << "[engine]   state[" << i << "] '" << states_[i].name_in
+                  << "' shape=[";
+        for (size_t d = 0; d < states_[i].shape.size(); ++d)
+            std::cerr << states_[i].shape[d]
+                      << (d + 1 < states_[i].shape.size() ? "," : "");
+        std::cerr << "] numel=" << states_[i].data.size() << "\n";
+    }
+    std::cerr << std::flush;
 }
 
 void OnnxInferenceEngine::reset_state() {

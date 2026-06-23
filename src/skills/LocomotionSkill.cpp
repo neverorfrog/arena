@@ -63,6 +63,7 @@ LocomotionSkill::LocomotionSkill(const TaskConfig& cfg)
     }
     observation_.reserve(engine_->input_dim());
     last_action_.assign(num_actions_, 0.0f);
+    warmup_remaining_ = engine_->warmup_steps();
 }
 
 LocomotionSkill::~LocomotionSkill() {
@@ -72,6 +73,8 @@ LocomotionSkill::~LocomotionSkill() {
 void LocomotionSkill::reset() {
     std::fill(last_action_.begin(), last_action_.end(), 0.0f);
     engine_->reset_state();  // clear the RMA obs window (no-op for stateless models)
+    warmup_remaining_ = engine_->warmup_steps();  // re-fill window before acting
+    heading_locked_ = false;  // re-latch heading from the current pose on next step
 }
 
 float LocomotionSkill::wrap_to_pi(float a) {
@@ -187,12 +190,32 @@ void LocomotionSkill::build_observation(const RobotState& state) {
 
 void LocomotionSkill::compute(const RobotState& state,
                               std::array<float, TaskConfig::NUM_JOINTS>& targets) {
+    // Refresh current yaw before update_input() so the heading lock latches onto
+    // the robot's actual heading. Otherwise the first update_input() runs with
+    // the stale member-init last_yaw_ (0.0) and the heading P-controller fights
+    // to rotate the robot back to absolute yaw 0, emitting a spurious vyaw
+    // command at startup even with no joystick input.
+    last_yaw_ = state.rpy[2];
     update_input();
     build_observation(state);
 
     Eigen::VectorXf obs_vec =
         Eigen::Map<Eigen::VectorXf>(observation_.data(), observation_.size());
     Eigen::VectorXf action_vec = engine_->infer(obs_vec);
+
+
+    // Cold-start warmup: hold the default pose while the recurrent observation
+    // window fills with real standing observations. We still ran infer() above to
+    // advance the window, but we discard its (transient) output and keep
+    // last_action_ at 0 — consistent with commanding the default pose this step.
+    if (warmup_remaining_ > 0) {
+        --warmup_remaining_;
+        for (int a = 0; a < num_actions_; a++) {
+            int j = config_.action_to_joint_idx[a];
+            targets[j] = config_.robot.default_joint_pos[j];
+        }
+        return;
+    }
 
     if (config_.debug) {
         static int dbg_step = 0;

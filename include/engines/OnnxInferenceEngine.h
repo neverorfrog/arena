@@ -37,6 +37,7 @@ public:
 
     int input_dim()  const override { return input_dim_; }
     int output_dim() const override { return output_dim_; }
+    int warmup_steps() const override { return warmup_steps_; }
 
 private:
     Ort::Env            env_;
@@ -46,6 +47,7 @@ private:
 
     int input_dim_;   // "obs" width
     int output_dim_;  // "actions" width
+    int warmup_steps_ = 0;  // recurrent-window depth (0 if stateless)
 
     // One entry per recurrent state tensor (empty for stateless models). `data`
     // is fed in as input `name_in` and refilled from output `name_out` each step.
