@@ -8,3 +8,5 @@ versions:
     path: jun20_1/t1-velocity-manu_ppo_jun20_1.onnx
   jun21_1:
     path: jun21_1/t1-velocity-manu_ppo_jun21_1.onnx
+  jun22_1:
+    path: jun22_1/t1-velocity-manu_ppo_jun22_1.onnx
