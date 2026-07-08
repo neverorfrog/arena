@@ -1,14 +1,4 @@
-default: jun20_1
+default: jun24_2
 versions:
-  jun19_3:
-    path: jun19_3/t1-velocity-manu_ppo_jun19_3.onnx
-  jun19_4:
-    path: jun19_4/t1-velocity-manu_ppo_jun19_4.onnx
-  jun20_1:
-    path: jun20_1/t1-velocity-manu_ppo_jun20_1.onnx
-  jun21_1:
-    path: jun21_1/t1-velocity-manu_ppo_jun21_1.onnx
-  jun22_1:
-    path: jun22_1/t1-velocity-manu_ppo_jun22_1.onnx
-  jun24_1:
-    path: jun24_1/t1-velocity-manu_ppo_jun24_1.onnx
+  jun24_2:
+    path: jun24_2/t1-velocity-manu_ppo_jun24_2.onnx

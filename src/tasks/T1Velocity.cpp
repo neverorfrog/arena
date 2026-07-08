@@ -58,7 +58,6 @@ class T1Velocity : public Policy {
             cfg.robot.mjcf_path = "/home/neverorfrog/code/spqr/colosseum/src/colosseum/robots/t1_23dof/xmls/T1_23dof.xml";
 
             // Hardware order = DDS JointIndex enum = MuJoCo XML depth-first.
-            // sim_joint_names is identical — the ONNX model was trained with
             // this observation layout (no reordering needed).
             cfg.robot.joint_names = cfg.robot.sim_joint_names = {
                 "AAHead_yaw",          "Head_pitch",
@@ -95,7 +94,7 @@ class T1Velocity : public Policy {
             // ── Safe startup sequence ─────────────────────────────────────
             // Prepare gains match the run gains — the zeta=2 damping already
             // provides smooth, over-damped approach to the default pose.
-            cfg.robot.prepare_state.duration_s    = 1.0f;
+            cfg.robot.prepare_state.duration_s    = 0.3f;
             cfg.robot.prepare_state.stiffness     = {
                 40., 40.,
                 40., 50., 20., 20,
@@ -125,15 +124,4 @@ class T1Velocity : public Policy {
         }
 };
 
-REGISTER_TASK("t1-velocity", T1Velocity);
-
-// RMA variant: identical robot/scene/skills, only the checkpoint differs.
-// Registering the same class under this name routes model resolution to
-// models/t1-velocity-rma/ (its models.yaml). The RMA checkpoint is a stateful
-// ONNX (obs window); OnnxInferenceEngine handles that transparently.
-REGISTER_TASK("t1-velocity-rma", T1Velocity);
-
-// Manufacturer-actuator variant: identical robot/scene/skills — only the gains
-// differ, and those now travel with the checkpoint via gains.yaml. So it is just
-// another registration of the same class, routing to models/t1-velocity-manu/.
 REGISTER_TASK("t1-velocity-manu", T1Velocity);
